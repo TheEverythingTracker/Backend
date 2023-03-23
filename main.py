@@ -1,5 +1,8 @@
 import cv2
 
+import tracking
+from errors import TrackingError
+
 VIDEO_SOURCE = '.resources/race_car.mp4'
 
 
@@ -14,20 +17,6 @@ def draw_box(img, bounding_box):
     cv2.putText(img, "Tracking", (75, 75), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
 
 
-def init_tracker(cap):
-    """
-    initialize object tracker by object selection in first frame
-    :param cap: video handle
-    :return: created tracker instance
-    """
-    # TODO: decide on tracker
-    tracker = cv2.TrackerMIL_create()
-    success, img = cap.read()
-    bounding_box = cv2.selectROI("Tracking", img, False)
-    tracker.init(img, bounding_box)
-    return tracker
-
-
 def calculate_fps(starting_clock_tick, ending_clock_tick):
     """
     calculate framerate of the video playback
@@ -38,29 +27,43 @@ def calculate_fps(starting_clock_tick, ending_clock_tick):
     return cv2.getTickFrequency() / (ending_clock_tick - starting_clock_tick)
 
 
-def main():
+def show_debug_output(img, bounding_box, fps):
+    """
+    For debugging purposes: Show the video with tracking info
+    :param img: current frame
+    :param bounding_box: bounding box info
+    :param fps: framerate
+    """
+    draw_box(img, bounding_box)
+    cv2.putText(img, str(int(fps)), (75, 50), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2)
+    cv2.imshow("Tracking", img)
+    if cv2.waitKey(1) & 0xff == ord('q'):
+        print("User exit")
+        exit(0)
 
+
+def main(debug=False):
     cap = cv2.VideoCapture(VIDEO_SOURCE)
-    tracker = init_tracker(cap)
+    success, img = cap.read()
+    bounding_box = cv2.selectROI("Tracking", img, False)  # todo: muss als parameter mitkommen
+    tracker = tracking.Tracker(img, bounding_box)
+    try:
+        while True:
+            starting_clock_tick = cv2.getTickCount()
 
-    while True:
-        starting_clock_tick = cv2.getTickCount()
-        success, img = cap.read()
-        success, bounding_box = tracker.update(img)
+            success, img = cap.read()
+            if not success:
+                raise IOError('Could not read frame')
+            bounding_box = tracker.update_tracking(img)
 
-        if success:
-            draw_box(img, bounding_box)
-        else:
-            cv2.putText(img, "lost tracker", (75, 75), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2)
+            # todo: send bounding box to frontend
+            fps = calculate_fps(starting_clock_tick, cv2.getTickCount())
+            show_debug_output(img, bounding_box, fps)
 
-        ending_clock_tick = cv2.getTickCount()
-        fps = calculate_fps(starting_clock_tick, ending_clock_tick)
-        cv2.putText(img, str(int(fps)), (75, 50), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2)
-        cv2.imshow("tracking", img)
-
-        if cv2.waitKey(1) & 0xff == ord('q'):
-            break
+    except (TrackingError, IOError) as e:
+        print(e)
+        return
 
 
 if __name__ == '__main__':
-    main()
+    main(debug=True)
