@@ -10,6 +10,7 @@ def draw_box(img, bounding_box):
 
 def init_tracker(cap):
     # tracker = cv2.TrackerMIL_create()
+    # decide on tracker
     tracker = cv2.TrackerMIL_create()
     success, img = cap.read()
     bounding_box = cv2.selectROI("Tracking", img, False)
@@ -18,7 +19,7 @@ def init_tracker(cap):
 
 
 def main():
-    cap = cv2.VideoCapture(1)
+    cap = cv2.VideoCapture('https://sample-videos.com/video123/mp4/360/big_buck_bunny_360p_2mb.mp4')
     tracker = init_tracker(cap)
 
     while True:
