@@ -53,7 +53,7 @@ def main():
         else:
             cv2.putText(img, "lost tracker", (75, 75), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2)
 
-        ending_clock_tick = cv2.getTickCount();
+        ending_clock_tick = cv2.getTickCount()
         fps = calculate_fps(starting_clock_tick, ending_clock_tick)
         cv2.putText(img, str(int(fps)), (75, 50), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2)
         cv2.imshow("tracking", img)
