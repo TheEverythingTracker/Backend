@@ -19,7 +19,7 @@ def init_tracker(cap):
 
 
 def main():
-    cap = cv2.VideoCapture('https://sample-videos.com/video123/mp4/360/big_buck_bunny_360p_2mb.mp4')
+    cap = cv2.VideoCapture('.resources/race_car.mp4')
     tracker = init_tracker(cap)
 
     while True:
