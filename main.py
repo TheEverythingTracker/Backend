@@ -1,9 +1,8 @@
 import asyncio
-import queue
 import threading
 
 import cv2
-import websockets
+import websocket
 
 import tracking
 from errors import TrackingError
@@ -47,18 +46,14 @@ def show_debug_output(img, bounding_box, fps):
         exit(0)
 
 
-bounding_box_queue = queue.Queue(20)
-
-
-async def producer_handler(websocket):
-    print("producer_handler started")
-    while True:
-        message = bounding_box_queue.get() # todo: discard frames if queue full?
-        await websocket.send(message)
-
-
 async def run_tracking_loop(cap, tracker, debug=False):
-    count = 0
+    """
+    Run the tracking loop and fill the queue with tracking data
+    :param cap: video source cv2 capture
+    :param tracker: tracker object to use for tracking
+    :param debug: show video for debugging
+    :return:
+    """
     while True:
         starting_clock_tick = cv2.getTickCount()
 
@@ -67,20 +62,24 @@ async def run_tracking_loop(cap, tracker, debug=False):
             raise IOError('Could not read frame')
         bounding_box = tracker.update_tracking(img)
         fps = calculate_fps(starting_clock_tick, cv2.getTickCount())
-        bounding_box_queue.put(str(bounding_box))
-        count += 1
-        print(count)
-        # todo: queue mit allen Bounding Boxes, Websocket holt die ab, wenn er so weit ist.
-        # todo: send bounding box to frontend
+        # todo better json representation of bounding box (or multiple ones)
+        websocket.bounding_box_queue.put(str(bounding_box))
 
         if debug:
             show_debug_output(img, bounding_box, fps)
 
 
 async def main(debug):
+    """
+    Main entry point for running the tracking loop
+    :param debug: enable debug video output
+    """
+    ws_thread = threading.Thread(target=websocket.start_websocket_server)
+    ws_thread.start()
+
     cap = cv2.VideoCapture(VIDEO_SOURCE)
     success, img = cap.read()
-    bounding_box = cv2.selectROI("Tracking", img, False)  # todo: muss als parameter mitkommen
+    bounding_box = cv2.selectROI("Tracking", img, False)
     tracker = tracking.Tracker(img, bounding_box)
     try:
         await run_tracking_loop(cap, tracker, debug)
@@ -89,17 +88,5 @@ async def main(debug):
         return
 
 
-async def run_websocket_server():
-    async with websockets.serve(producer_handler, "localhost", 8765):
-        await asyncio.Future()
-
-
-def start_websocket_thread():
-    asyncio.run(run_websocket_server())
-
-
 if __name__ == '__main__':
-    ws_thread = threading.Thread(target=start_websocket_thread)
-    ws_thread.start()
-    print("main")
     asyncio.run(main(debug=True))
