@@ -1,4 +1,4 @@
-import tracking
+from worker import tracking
 from errors import TrackingError
 
 

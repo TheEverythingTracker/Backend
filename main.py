@@ -1,4 +1,6 @@
+import asyncio
 import multiprocessing
+import threading
 
 import cv2
 import websocket
@@ -8,15 +10,13 @@ from worker import worker
 VIDEO_SOURCE = '.resources/race_car.mp4'
 
 
-def show_debug_output(img, bounding_box, fps):
+def show_debug_output(img, bounding_box):
     """
     For debugging purposes: Show the video with tracking info
     :param img: current frame
     :param bounding_box: bounding box info
-    :param fps: framerate
     """
     draw_box(img, bounding_box)
-    cv2.putText(img, str(int(fps)), (75, 50), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2)
     cv2.imshow("Tracking", img)
     if cv2.waitKey(1) & 0xff == ord('q'):
         print("User exit")
@@ -34,12 +34,14 @@ def draw_box(img, bounding_box):
     cv2.putText(img, "Tracking", (75, 75), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
 
 
-def main(debug):
+async def main(debug):
     """
     Main entry point for running the tracking loop
     :param debug: enable debug video output
     """
-    websocket.start_websocket_server()
+    # todo: can we use some asyncio magic here? --> asyncio is not supposed to be used together with threading
+    ws_thread = threading.Thread(target=websocket.start_websocket_server)
+    ws_thread.start()
 
     cap = cv2.VideoCapture(VIDEO_SOURCE)
     success, img = cap.read()
@@ -52,11 +54,15 @@ def main(debug):
     worker_process = multiprocessing.Process(target=worker.do_work, args=(img, bounding_box, conn1, queue))
     worker_process.start()
 
-    queue.get()
-
-    if debug:
-        show_debug_output(img, bounding_box)
+    while True:
+        success, img = cap.read() # todo: errorhandling
+        conn2.send(img)
+        bounding_box = queue.get()
+        # todo: build proper json from bounding box, or multiple bounding boxes in the future
+        websocket.bounding_box_queue.put(str(bounding_box))
+        if debug:
+            show_debug_output(img, bounding_box)
 
 
 if __name__ == '__main__':
-    main(debug=True)
+    asyncio.run(main(debug=True))
