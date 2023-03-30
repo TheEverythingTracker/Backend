@@ -1,33 +1,11 @@
-import threading
+import multiprocessing
 
 import cv2
 import websocket
 
-import tracking
-from errors import TrackingError
+from worker import worker
 
 VIDEO_SOURCE = '.resources/race_car.mp4'
-
-
-def draw_box(img, bounding_box):
-    """
-    draw bounding box on next frame
-    :param img: frame to print bounding box on
-    :param bounding_box: coordinates and dimensions of the bounding box
-    """
-    x, y, w, h = int(bounding_box[0]), int(bounding_box[1]), int(bounding_box[2]), int(bounding_box[3])
-    cv2.rectangle(img, (x, y), (x + w, y + h), (255, 0, 0), 3, 1)
-    cv2.putText(img, "Tracking", (75, 75), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
-
-
-def calculate_fps(starting_clock_tick, ending_clock_tick):
-    """
-    calculate framerate of the video playback
-    :param starting_clock_tick: cpu clock tick at the beginning of the calculation
-    :param ending_clock_tick: cpu clock tick at the end of the calculation
-    :return: framerate
-    """
-    return cv2.getTickFrequency() / (ending_clock_tick - starting_clock_tick)
 
 
 def show_debug_output(img, bounding_box, fps):
@@ -45,27 +23,15 @@ def show_debug_output(img, bounding_box, fps):
         exit(0)
 
 
-def run_tracking_loop(cap, tracker, debug=False):
+def draw_box(img, bounding_box):
     """
-    Run the tracking loop and fill the queue with tracking data
-    :param cap: video source cv2 capture
-    :param tracker: tracker object to use for tracking
-    :param debug: show video for debugging
-    :return:
+    draw bounding box on next frame
+    :param img: frame to print bounding box on
+    :param bounding_box: coordinates and dimensions of the bounding box
     """
-    while True:
-        starting_clock_tick = cv2.getTickCount()
-
-        success, img = cap.read()
-        if not success:
-            raise IOError('Could not read frame')
-        bounding_box = tracker.update_tracking(img)
-        fps = calculate_fps(starting_clock_tick, cv2.getTickCount())
-        # todo better json representation of bounding box (or multiple ones)
-        websocket.bounding_box_queue.put(str(bounding_box))
-
-        if debug:
-            show_debug_output(img, bounding_box, fps)
+    x, y, w, h = int(bounding_box[0]), int(bounding_box[1]), int(bounding_box[2]), int(bounding_box[3])
+    cv2.rectangle(img, (x, y), (x + w, y + h), (255, 0, 0), 3, 1)
+    cv2.putText(img, "Tracking", (75, 75), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
 
 
 def main(debug):
@@ -73,18 +39,23 @@ def main(debug):
     Main entry point for running the tracking loop
     :param debug: enable debug video output
     """
-    ws_thread = threading.Thread(target=websocket.start_websocket_server)
-    ws_thread.start()
+    websocket.start_websocket_server()
 
     cap = cv2.VideoCapture(VIDEO_SOURCE)
     success, img = cap.read()
     bounding_box = cv2.selectROI("Tracking", img, False)
-    tracker = tracking.Tracker(img, bounding_box)
-    try:
-        run_tracking_loop(cap, tracker, debug)
-    except (TrackingError, IOError) as e:
-        print(e)
-        return
+
+    # conn1 to receive data and conn2 to send data
+    conn1, conn2 = multiprocessing.Pipe()
+    queue = multiprocessing.Queue()
+
+    worker_process = multiprocessing.Process(target=worker.do_work, args=(img, bounding_box, conn1, queue))
+    worker_process.start()
+
+    queue.get()
+
+    if debug:
+        show_debug_output(img, bounding_box)
 
 
 if __name__ == '__main__':
