@@ -39,4 +39,3 @@ class Tracker:
 
             # todo better json representation of bounding box (or multiple ones)
             self.queue.put(bounding_box)
-
