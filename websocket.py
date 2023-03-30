@@ -17,7 +17,7 @@ async def run_websocket_server():
     async with websockets.serve(__consumer_handler, "localhost", 8765):
         await asyncio.Future()
 
-
+#test
 def start_websocket_server():
     """
     Start a server for sending the tracking data over websocket
