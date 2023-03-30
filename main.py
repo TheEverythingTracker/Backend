@@ -1,4 +1,3 @@
-import asyncio
 import threading
 
 import cv2
@@ -46,7 +45,7 @@ def show_debug_output(img, bounding_box, fps):
         exit(0)
 
 
-async def run_tracking_loop(cap, tracker, debug=False):
+def run_tracking_loop(cap, tracker, debug=False):
     """
     Run the tracking loop and fill the queue with tracking data
     :param cap: video source cv2 capture
@@ -69,7 +68,7 @@ async def run_tracking_loop(cap, tracker, debug=False):
             show_debug_output(img, bounding_box, fps)
 
 
-async def main(debug):
+def main(debug):
     """
     Main entry point for running the tracking loop
     :param debug: enable debug video output
@@ -82,11 +81,11 @@ async def main(debug):
     bounding_box = cv2.selectROI("Tracking", img, False)
     tracker = tracking.Tracker(img, bounding_box)
     try:
-        await run_tracking_loop(cap, tracker, debug)
+        run_tracking_loop(cap, tracker, debug)
     except (TrackingError, IOError) as e:
         print(e)
         return
 
 
 if __name__ == '__main__':
-    asyncio.run(main(debug=True))
+    main(debug=True)
