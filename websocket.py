@@ -1,6 +1,5 @@
 import asyncio
 import multiprocessing
-import queue
 
 import websockets
 

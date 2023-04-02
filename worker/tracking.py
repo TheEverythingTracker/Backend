@@ -5,7 +5,7 @@ from errors import TrackingError
 
 class Tracker:
 
-    def __init__(self, img, bounding_box, conn1, queue):
+    def __init__(self, img, bounding_box, receiver, queue):
         """
         initialize object tracker by object selection in first frame
         :param cap: video handle
@@ -14,7 +14,7 @@ class Tracker:
         # TODO: decide on tracker
         tracker = cv2.TrackerMIL_create()
         tracker.init(img, bounding_box)
-        self.pipe = conn1
+        self.receiver = receiver
         self.queue = queue
         self.tracker = tracker
 
@@ -34,7 +34,7 @@ class Tracker:
         :return:
         """
         while True:
-            img = self.pipe.recv()
+            img = self.receiver.recv()
             bounding_box = self.update_tracking(img)
 
             # todo better json representation of bounding box (or multiple ones)

@@ -6,15 +6,16 @@ from errors import TrackingError
 
 class WorkerProcess:
     def __init__(self, img, bounding_box: tuple, queue: multiprocessing.Queue):
-        self.to_worker, self.to_master = multiprocessing.Pipe()
+        self.receiver, self.sender = multiprocessing.Pipe()
         self.has_quit = multiprocessing.Event()
         self.process = multiprocessing.Process(target=do_work,
-                                               args=(img, bounding_box, self.to_worker, queue, self.has_quit))
+                                               args=(img, bounding_box, self.receiver, queue, self.has_quit))
+        self.process.start()
 
 
-def do_work(img, bounding_box: tuple, to_worker: multiprocessing.Pipe, queue: multiprocessing.Queue,
+def do_work(img, bounding_box: tuple, receiver: multiprocessing.Pipe, queue: multiprocessing.Queue,
             has_quit: multiprocessing.Event):
-    tracker = tracking.Tracker(img, bounding_box, to_worker, queue)
+    tracker = tracking.Tracker(img, bounding_box, receiver, queue)
     try:
         tracker.run_tracking_loop()
     except (TrackingError, IOError) as e:
