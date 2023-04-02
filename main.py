@@ -43,6 +43,9 @@ async def main(debug):
     ws_thread = threading.Thread(target=websocket.start_websocket_server)
     ws_thread.start()
 
+    num_cores = multiprocessing.cpu_count()
+    print(f"{num_cores} cores available")
+
     cap = cv2.VideoCapture(VIDEO_SOURCE)
     success, img = cap.read()
     bounding_box = cv2.selectROI("Tracking", img, False)
@@ -55,7 +58,7 @@ async def main(debug):
     worker_process.start()
 
     while True:
-        success, img = cap.read() # todo: errorhandling
+        success, img = cap.read()  # todo: errorhandling
         conn2.send(img)
         bounding_box = queue.get()
         # todo: build proper json from bounding box, or multiple bounding boxes in the future
