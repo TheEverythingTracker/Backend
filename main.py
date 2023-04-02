@@ -1,10 +1,10 @@
-import asyncio
 import multiprocessing
 import threading
 
 import cv2
-import websocket
 
+import websocket
+from errors import OutOfResourcesError
 from worker import worker
 
 VIDEO_SOURCE = '.resources/race_car.mp4'
@@ -54,8 +54,13 @@ def main(debug):
     conn1, conn2 = multiprocessing.Pipe()
     queue = multiprocessing.Queue()
 
-    worker_process = multiprocessing.Process(target=worker.do_work, args=(img, bounding_box, conn1, queue))
-    worker_process.start()
+    processes = []
+    if len(processes) <= num_cores:
+        worker_process = multiprocessing.Process(target=worker.do_work, args=(img, bounding_box, conn1, queue))
+        processes.append(worker_process)
+        worker_process.start()
+    else:
+        raise OutOfResourcesError("Not enough cpu cores")
 
     while True:
         success, img = cap.read()  # todo: errorhandling

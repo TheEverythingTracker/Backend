@@ -9,3 +9,4 @@ def do_work(img, bounding_box, conn2, queue):
     except (TrackingError, IOError) as e:
         print(e)
         return
+    # TODO: raise process deletion from process array
