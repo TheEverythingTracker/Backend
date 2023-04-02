@@ -35,8 +35,7 @@ def draw_box(img, bounding_box: tuple):
     :param bounding_box: coordinates and dimensions of the bounding box
     """
     x, y, w, h = int(bounding_box[0]), int(bounding_box[1]), int(bounding_box[2]), int(bounding_box[3])
-    cv2.rectangle(img, (x, y), (x + w, y + h), (random.randint(0, 255), random.randint(0, 255), random.randint(0, 255)),
-                  3, 1)
+    cv2.rectangle(img, (x, y), (x + w, y + h), (255, 0, 0), 3, 1)
 
 
 def main(debug: bool):
@@ -45,8 +44,7 @@ def main(debug: bool):
     :param debug: enable debug video output
     """
     # todo: can we use some asyncio magic here? --> asyncio is not supposed to be used together with threading
-    stop_websocket = threading.Event()
-    ws_thread = threading.Thread(target=websocket.start_websocket_server, args=(stop_websocket,))
+    ws_thread = threading.Thread(target=websocket.start_websocket_server)
     ws_thread.start()
 
     num_cores: int = multiprocessing.cpu_count()
@@ -93,7 +91,6 @@ def main(debug: bool):
 
     # Cleanup
     cv2.destroyWindow("Tracking")
-    stop_websocket.set() # todo how does the websocket thread know when to quit?
     print("Goodbye!")
 
 
