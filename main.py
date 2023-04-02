@@ -34,7 +34,7 @@ def draw_box(img, bounding_box):
     cv2.putText(img, "Tracking", (75, 75), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
 
 
-async def main(debug):
+def main(debug):
     """
     Main entry point for running the tracking loop
     :param debug: enable debug video output
@@ -68,4 +68,4 @@ async def main(debug):
 
 
 if __name__ == '__main__':
-    asyncio.run(main(debug=True))
+    main(debug=True)
