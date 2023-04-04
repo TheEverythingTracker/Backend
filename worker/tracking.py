@@ -39,3 +39,11 @@ class Tracker:
 
             # todo better json representation of bounding box (or multiple ones)
             self.queue.put(bounding_box)
+
+
+# Frames droppen um den neuen wieder zu bekommen
+# numdropped = 0
+# while pipe.poll:
+#   pipe.receive
+#   numdropped++
+# return numdropped
