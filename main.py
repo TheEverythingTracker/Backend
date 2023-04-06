@@ -1,6 +1,6 @@
+import asyncio
 import multiprocessing
 import queue
-import random
 import threading
 from typing import List
 
@@ -38,15 +38,12 @@ def draw_box(img, bounding_box: tuple):
     cv2.rectangle(img, (x, y), (x + w, y + h), (255, 0, 0), 3, 1)
 
 
-def main(debug: bool):
+def run_control_loop(debug: bool, bounding_boxes_to_websocket_queue: multiprocessing.Queue):
     """
     Main entry point for running the tracking loop
+    :param bounding_boxes_to_websocket_queue: queue to send bounding boxes to
     :param debug: enable debug video output
     """
-    # todo: can we use some asyncio magic here? --> asyncio is not supposed to be used together with threading
-    ws_thread = threading.Thread(target=websocket.start_websocket_server)
-    ws_thread.start()
-
     num_cores: int = multiprocessing.cpu_count()
     print(f"{num_cores} cores available")
 
@@ -54,11 +51,11 @@ def main(debug: bool):
     success, img = cap.read()  # todo: img is of type numpy.ndarray
     bounding_box = cv2.selectROI("Tracking", img, False)
 
-    bounding_box_queue = multiprocessing.Queue()
+    bounding_boxes_from_workers_queue = multiprocessing.Queue()
 
     workers = []
     if len(workers) <= num_cores:
-        worker_process = WorkerProcess(img, bounding_box, bounding_box_queue)
+        worker_process = WorkerProcess(img, bounding_box, bounding_boxes_from_workers_queue)
         workers.append(worker_process)
         print(f"worker {len(workers)} started")
     else:
@@ -75,14 +72,14 @@ def main(debug: bool):
             else:
                 w.sender.send(img)
             try:
-                bounding_box = bounding_box_queue.get(block=False)
+                bounding_box = bounding_boxes_from_workers_queue.get(block=False)
                 bounding_boxes.append(bounding_box)
             except queue.Empty:
                 # todo: dont't put empty bounding boxes into queue
                 print("empty queue")
         print(bounding_boxes)
         # todo: build proper json from bounding box, or multiple bounding boxes in the future
-        websocket.bounding_box_queue.put(str(bounding_boxes))
+        bounding_boxes_to_websocket_queue.put(str(bounding_boxes))
         try:
             if debug:
                 show_debug_output(img, bounding_boxes)
@@ -94,5 +91,18 @@ def main(debug: bool):
     print("Goodbye!")
 
 
+def start_websocket_server():
+    """
+    Start a server for sending the tracking data over websocket
+    """
+    websocket_server = websocket.WebSocketServer()
+    asyncio.run(websocket_server.run())
+    return websocket_server
+
+
+def main():
+    websocket_server: websocket.WebSocketServer = start_websocket_server()
+
+
 if __name__ == '__main__':
-    main(debug=True)
+    main()
