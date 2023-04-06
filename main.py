@@ -88,6 +88,7 @@ def run_control_loop(debug: bool, bounding_boxes_to_websocket_queue: multiproces
 
     # Cleanup
     cv2.destroyWindow("Tracking")
+    cap.release()
     print("Goodbye!")
 
 

@@ -37,7 +37,8 @@ class WebSocketServer:
         print("producer_handler started")
         while True:
             try:
-                message = self.bounding_box_queue.get(block=False)  # todo: discard frames if queue full?
+                # todo: discard frames if queue full?
+                message = self.bounding_box_queue.get(timeout=1) # todo: this adds a lot of delay on receiving messages...?
                 print(f"producer_handler: sending {message}")
                 await websocket.send(message)
             except queue.Empty:
