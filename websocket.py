@@ -1,6 +1,5 @@
 import asyncio
 import multiprocessing
-import queue
 import threading
 
 import websockets
@@ -9,7 +8,7 @@ from main import run_control_loop
 
 
 class WebSocketServer:
-    # Hiermit beschänken wir uns auf einen Control-Loop und damit auf einen Client(Frontend)
+    # Hiermit beschränken wir uns auf einen Control-Loop und damit auf einen Client(Frontend)
     # -> Müsste also als Prozess gestartet werden und als Liste verwaltet werden, wenn wir mehrere Clients bedienen wollen
     def __init__(self):
         self.control_loop_thread: threading.Thread = None
@@ -36,16 +35,15 @@ class WebSocketServer:
     async def __producer_handler(self, websocket):
         print("producer_handler started")
         while True:
-            try:
-                # todo: discard frames if queue full?
-                message = self.bounding_box_queue.get(timeout=1) # todo: this adds a lot of delay on receiving messages...?
-                print(f"producer_handler: sending {message}")
-                await websocket.send(message)
-            except queue.Empty:
-                print("producer_handler: queue is empty, waiting...") # todo: dirty hack --> better use an async queue
+            # todo: discard frames if queue full?
+            loop = asyncio.get_running_loop()
+            message = await loop.run_in_executor(None, self.bounding_box_queue.get)
+            print(f"producer_handler: sending {message}")
+            await websocket.send(message)
             # If you run a loop that contains only synchronous operations and a send() call,
             # you must yield control explicitly with asyncio.sleep():
             # https://websockets.readthedocs.io/en/stable/faq/asyncio.html
+            # todo vielleicht brauchen wir das nicht mehr, weil wir jetzt asynchron in einem thread auf das nächste Ergebnis der Queue warten und die Kontrolle abgeben
             await asyncio.sleep(0)
 
     async def __handler(self, websocket):
