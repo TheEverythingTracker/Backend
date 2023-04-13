@@ -25,7 +25,7 @@ class WebSocketServer:
         self.control_loop_thread: threading.Thread = None
         self.bounding_box_queue = multiprocessing.Queue(20)
 
-    def __handle_event(self, message: str):  # todo: mit Frontend abstimmen, wie die JSON-Formate aussehen sollen
+    async def __handle_event(self, message: str):  # todo: mit Frontend abstimmen, wie die JSON-Formate aussehen sollen
         # todo: parse message and get event type
         # todo: write answer message to websocket --> websocket as member-variable --> additional write-method with event as parameter?
         print(f"Handling event for message {message}")
@@ -33,17 +33,23 @@ class WebSocketServer:
         if event.event_type == dto.EventType.START_CONTROL_LOOP:
             if self.control_loop_thread is not None:
                 if self.control_loop_thread.is_alive():
+                    answer = dto.ControlLoopStartedEvent(event_type=dto.EventType.CONTROL_LOOP_STARTED,
+                                                         message="Control loop already running!")
+                    await self.send_message(answer)
                     print("Control loop already running!")
                     return
             print("Starting control loop...")
             self.control_loop_thread = threading.Thread(target=run_control_loop, args=(True, self.bounding_box_queue))
             self.control_loop_thread.start()
+            answer = dto.ControlLoopStartedEvent(event_type=dto.EventType.CONTROL_LOOP_STARTED,
+                                                 message="Control loop successfully started.")
+            await self.send_message(answer)
 
     async def __consumer_handler(self, websocket):
         print("consumer_handler started")
         async for message in websocket:
             print(f"received message: {message}")
-            self.__handle_event(message)
+            await self.__handle_event(message)
 
     async def __producer_handler(self, websocket):
         print("producer_handler started")
@@ -60,6 +66,7 @@ class WebSocketServer:
             await asyncio.sleep(0)
 
     async def __handler(self, websocket):
+        self.websocket = websocket
         consumer_task = asyncio.create_task(self.__consumer_handler(websocket))
         producer_task = asyncio.create_task(self.__producer_handler(websocket))
         done, pending = await asyncio.wait(
@@ -68,6 +75,9 @@ class WebSocketServer:
         )
         for task in pending:
             task.cancel()
+
+    async def send_message(self, message: dto.AnswerEvent):
+        await self.websocket.send(message.json())
 
     async def run(self):
         async with websockets.serve(self.__handler, "localhost", 8765):
