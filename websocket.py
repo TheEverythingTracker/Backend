@@ -58,7 +58,7 @@ class WebSocketServer:
             loop = asyncio.get_running_loop()
             message = await loop.run_in_executor(None, self.bounding_box_queue.get)
             print(f"producer_handler: sending {message}")
-            await websocket.send(message)
+            await websocket.send(message.json())
             # If you run a loop that contains only synchronous operations and a send() call,
             # you must yield control explicitly with asyncio.sleep():
             # https://websockets.readthedocs.io/en/stable/faq/asyncio.html

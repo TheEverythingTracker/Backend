@@ -1,19 +1,19 @@
 import asyncio
 import multiprocessing
 import queue
-import threading
 from typing import List
 
 import cv2
 
 import websocket
+from dto import BoundingBox, UpdateTrackingEvent, EventType
 from errors import OutOfResourcesError
 from worker.worker import WorkerProcess
 
 VIDEO_SOURCE = '.resources/race_car.mp4'
 
 
-def show_debug_output(img, bounding_boxes: List[tuple]):
+def show_debug_output(img, bounding_boxes: List[BoundingBox]):
     """
     For debugging purposes: Show the video with tracking info
     :param img: current frame
@@ -28,13 +28,13 @@ def show_debug_output(img, bounding_boxes: List[tuple]):
         exit(0)
 
 
-def draw_box(img, bounding_box: tuple):
+def draw_box(img, bounding_box: BoundingBox):
     """
     draw bounding box on next frame
     :param img: frame to print bounding box on
     :param bounding_box: coordinates and dimensions of the bounding box
     """
-    x, y, w, h = int(bounding_box[0]), int(bounding_box[1]), int(bounding_box[2]), int(bounding_box[3])
+    x, y, w, h = int(bounding_box.x), int(bounding_box.y), int(bounding_box.width), int(bounding_box.height)
     cv2.rectangle(img, (x, y), (x + w, y + h), (255, 0, 0), 3, 1)
 
 
@@ -61,9 +61,12 @@ def run_control_loop(debug: bool, bounding_boxes_to_websocket_queue: multiproces
     else:
         raise OutOfResourcesError("Not enough cpu cores")
 
+    # todo: is there a better way to get frame numbers?
+    frame_number: int = 0
     while workers:
         success, img = cap.read()  # todo: errorhandling
-        bounding_boxes = []
+        frame_number += 1
+        tracking_event = UpdateTrackingEvent(event_type=EventType.UPDATE_TRACKING, frame=frame_number, objects=[])
         # todo: this loop will block until all workers have processed the current frame --> might be a performance bottleneck
         for w in workers.copy():
             if w.has_quit.is_set():
@@ -73,16 +76,17 @@ def run_control_loop(debug: bool, bounding_boxes_to_websocket_queue: multiproces
                 w.sender.send(img)
             try:
                 bounding_box = bounding_boxes_from_workers_queue.get(block=False)
-                bounding_boxes.append(bounding_box)
+                tracking_event.objects.append(
+                    BoundingBox(x=bounding_box[0], y=bounding_box[1], width=bounding_box[2], height=bounding_box[3]))
             except queue.Empty:
                 # todo: dont't put empty bounding boxes into queue
                 print("empty queue")
-        print(bounding_boxes)
+        print(tracking_event.objects)
         # todo: build proper json from bounding box, or multiple bounding boxes in the future
-        bounding_boxes_to_websocket_queue.put(str(bounding_boxes))
+        bounding_boxes_to_websocket_queue.put(tracking_event)
         try:
             if debug:
-                show_debug_output(img, bounding_boxes)
+                show_debug_output(img, tracking_event.objects)
         except Exception:
             print("Debug Output failed")
 
