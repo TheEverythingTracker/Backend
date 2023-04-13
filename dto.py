@@ -4,22 +4,30 @@ from typing import List
 from pydantic import BaseModel
 
 
-class EventType(Enum, str):
-    START_CONTROL_LOOP = "start-control-loop"
-    CONTROL_LOOP_STARTED = "control-loop-started"
+class EventType(str, Enum):
     ADD_OBJECT = "add-object"
     OBJECT_ADDED = "object-added"
     DELETE_OBJECT = "delete-object"
     OBJECT_DELETED = "object-deleted"
     UPDATE_TRACKING = "update-tracking"
+    START_CONTROL_LOOP = "start-control-loop"
+    CONTROL_LOOP_STARTED = "control-loop-started"
 
 
 class Event(BaseModel):
     event_type: EventType
 
 
+class AnswerEvent(Event):
+    message: str
+
+
 class StartControlLoopEvent(Event):
     video_source: str  # todo validation?
+
+
+class ControlLoopStartedEvent(AnswerEvent):
+    pass
 
 
 class BoundingBox(BaseModel):
@@ -36,7 +44,7 @@ class AddObjectEvent(Event):
 
 
 # todo: events are basically the same... what do we do?
-class ObjectAddedEvent(Event):
+class ObjectAddedEvent(AnswerEvent):
     id: int
 
 
@@ -44,7 +52,7 @@ class DeleteObjectEvent(Event):
     id: int
 
 
-class ObjectDeletedEvent(Event):
+class ObjectDeletedEvent(AnswerEvent):
     id: int
 
 

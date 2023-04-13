@@ -1,10 +1,21 @@
 import asyncio
+import json
 import multiprocessing
 import threading
 
 import websockets
+from pydantic import parse_obj_as
 
+import dto
 from main import run_control_loop
+
+
+def _get_event_object_from_message(message):
+    event = json.loads(message)
+    if event["event_type"] == dto.EventType.START_CONTROL_LOOP:
+        return parse_obj_as(dto.StartControlLoopEvent, event)
+    if event["event_type"] == dto.EventType.ADD_OBJECT:
+        return parse_obj_as(dto.AddObjectEvent, event)
 
 
 class WebSocketServer:
@@ -16,8 +27,10 @@ class WebSocketServer:
 
     def __handle_event(self, message: str):  # todo: mit Frontend abstimmen, wie die JSON-Formate aussehen sollen
         # todo: parse message and get event type
+        # todo: write answer message to websocket --> websocket as member-variable --> additional write-method with event as parameter?
         print(f"Handling event for message {message}")
-        if message == 'start-control-loop':
+        event: dto.Event = _get_event_object_from_message(message)
+        if event.event_type == dto.EventType.START_CONTROL_LOOP:
             if self.control_loop_thread is not None:
                 if self.control_loop_thread.is_alive():
                     print("Control loop already running!")
