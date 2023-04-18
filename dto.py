@@ -31,6 +31,7 @@ class ControlLoopStartedEvent(AnswerEvent):
 
 
 class BoundingBox(BaseModel):
+    # todo: id
     x: int
     y: int
     width: int
