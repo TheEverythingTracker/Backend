@@ -5,15 +5,15 @@ from typing import List
 
 import cv2
 
+import dto
 import websocket
-from dto import BoundingBox, UpdateTrackingEvent, EventType
 from errors import OutOfResourcesError
 from worker.worker import WorkerProcess
 
 VIDEO_SOURCE = '.resources/race_car.mp4'
 
 
-def show_debug_output(img, bounding_boxes: List[BoundingBox]):
+def show_debug_output(img, bounding_boxes: List[dto.BoundingBox]):
     """
     For debugging purposes: Show the video with tracking info
     :param img: current frame
@@ -28,7 +28,7 @@ def show_debug_output(img, bounding_boxes: List[BoundingBox]):
         exit(0)
 
 
-def draw_box(img, bounding_box: BoundingBox):
+def draw_box(img, bounding_box: dto.BoundingBox):
     """
     draw bounding box on next frame
     :param img: frame to print bounding box on
@@ -66,7 +66,7 @@ def run_control_loop(debug: bool, bounding_boxes_to_websocket_queue: multiproces
     while workers:
         success, img = cap.read()  # todo: errorhandling
         frame_number += 1
-        tracking_event = UpdateTrackingEvent(event_type=EventType.UPDATE_TRACKING, frame=frame_number, objects=[])
+        tracking_event: dto.UpdateTrackingEvent = dto.UpdateTrackingEvent(event_type=dto.EventType.UPDATE_TRACKING, frame=frame_number, objects=[])
         # todo: this loop will block until all workers have processed the current frame --> might be a performance bottleneck
         for w in workers.copy():
             if w.has_quit.is_set():
@@ -77,12 +77,11 @@ def run_control_loop(debug: bool, bounding_boxes_to_websocket_queue: multiproces
             try:
                 bounding_box = bounding_boxes_from_workers_queue.get(block=False)
                 tracking_event.objects.append(
-                    BoundingBox(x=bounding_box[0], y=bounding_box[1], width=bounding_box[2], height=bounding_box[3]))
+                    dto.BoundingBox(x=bounding_box[0], y=bounding_box[1], width=bounding_box[2], height=bounding_box[3]))
             except queue.Empty:
                 # todo: dont't put empty bounding boxes into queue
                 print("empty queue")
         print(tracking_event.objects)
-        # todo: build proper json from bounding box, or multiple bounding boxes in the future
         bounding_boxes_to_websocket_queue.put(tracking_event)
         try:
             if debug:
