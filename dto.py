@@ -1,62 +1,62 @@
 from enum import Enum
 from typing import List
+from uuid import UUID
 
 from pydantic import BaseModel
 
 
 class EventType(str, Enum):
-    ADD_OBJECT = "add-object"
-    OBJECT_ADDED = "object-added"
-    DELETE_OBJECT = "delete-object"
-    OBJECT_DELETED = "object-deleted"
-    UPDATE_TRACKING = "update-tracking"
     START_CONTROL_LOOP = "start-control-loop"
-    CONTROL_LOOP_STARTED = "control-loop-started"
+    ADD_BOUNDING_BOX = "add-bounding-box"
+    DELETE_BOUNDING_BOX = "delete-bounding-box"
+    UPDATE_TRACKING = "update-tracking"
+    STOP_CONTROL_LOOP = "stop-control-loop"
+    SUCCESS = "success"
+    FAILURE = "failure"
 
 
 class Event(BaseModel):
     event_type: EventType
-
-
-class AnswerEvent(Event):
-    message: str
+    request_id: UUID
 
 
 class StartControlLoopEvent(Event):
     video_source: str  # todo validation?
 
 
-class ControlLoopStartedEvent(AnswerEvent):
-    pass
-
-
 class BoundingBox(BaseModel):
-    # todo: id
+    id: int
     x: int
     y: int
     width: int
     height: int
 
 
-class AddObjectEvent(Event):
-    object_id: int  # todo int? uuid? ...?
+class AddBoundingBoxEvent(Event):
     frame: int
     bounding_box: BoundingBox
 
 
-# todo: events are basically the same... what do we do?
-class ObjectAddedEvent(AnswerEvent):
-    id: int
-
-
-class DeleteObjectEvent(Event):
-    id: int
-
-
-class ObjectDeletedEvent(AnswerEvent):
-    id: int
+class DeleteBoundingBoxesEvent(Event):
+    ids: List[int]
 
 
 class UpdateTrackingEvent(Event):
     frame: int
-    objects: List[BoundingBox]
+    bounding_boxes: List[BoundingBox]
+
+
+class StopControlLoopEvent(Event):
+    pass
+
+
+class AnswerEvent(Event):
+    message: str
+
+
+class SuccessEvent(AnswerEvent):
+    pass
+
+
+class FailureEvent(AnswerEvent):
+    pass

@@ -12,10 +12,10 @@ from main import run_control_loop
 
 def _get_event_object_from_message(message):
     event: dict = json.loads(message)
-    if event["event_type"] == dto.EventType.START_CONTROL_LOOP:
+    if event["event-type"] == dto.EventType.START_CONTROL_LOOP:
         return parse_obj_as(dto.StartControlLoopEvent, event)
-    if event["event_type"] == dto.EventType.ADD_OBJECT:
-        return parse_obj_as(dto.AddObjectEvent, event)
+    if event["event-type"] == dto.EventType.ADD_BOUNDING_BOX:
+        return parse_obj_as(dto.AddBoundingBoxEvent, event)
 
 
 class WebSocketServer:
@@ -69,7 +69,7 @@ class WebSocketServer:
             loop = asyncio.get_running_loop()
             message = await loop.run_in_executor(None, self.bounding_box_queue.get)
             print(f"producer_handler: sending {message}")
-            await websocket.send(message.json())
+            await websocket.send(message.json(by_alias=True))
             # If you run a loop that contains only synchronous operations and a send() call,
             # you must yield control explicitly with asyncio.sleep():
             # https://websockets.readthedocs.io/en/stable/faq/asyncio.html
@@ -88,7 +88,7 @@ class WebSocketServer:
             task.cancel()
 
     async def send_message(self, message: dto.AnswerEvent):
-        await self.websocket.send(message.json())
+        await self.websocket.send(message.json(by_alias=True))
 
     async def run(self):
         async with websockets.serve(self.__handler, "localhost", 8765):

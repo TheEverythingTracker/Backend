@@ -76,16 +76,16 @@ def run_control_loop(debug: bool, bounding_boxes_to_websocket_queue: multiproces
                 w.sender.send(img)
             try:
                 bounding_box = bounding_boxes_from_workers_queue.get(block=False)
-                tracking_event.objects.append(
+                tracking_event.bounding_boxes.append(
                     dto.BoundingBox(x=bounding_box[0], y=bounding_box[1], width=bounding_box[2], height=bounding_box[3]))
             except queue.Empty:
                 # todo: dont't put empty bounding boxes into queue
                 print("empty queue")
-        print(tracking_event.objects)
+        print(tracking_event.bounding_boxes)
         bounding_boxes_to_websocket_queue.put(tracking_event)
         try:
             if debug:
-                show_debug_output(img, tracking_event.objects)
+                show_debug_output(img, tracking_event.bounding_boxes)
         except Exception:
             print("Debug Output failed")
 
