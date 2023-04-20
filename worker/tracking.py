@@ -1,5 +1,6 @@
 import cv2
 
+from dto import BoundingBox
 from errors import TrackingError
 
 
@@ -25,21 +26,16 @@ class Tracker:
         else:
             raise TrackingError('Tracking failed')
 
-    def run_tracking_loop(self):
+    def run_tracking_loop(self, worker_id: int):
         """
         Run the tracking loop and fill the queue with tracking data
-        :param cap: video source cv2 capture
-        :param tracker: tracker object to use for tracking
-        :param debug: show video for debugging
         :return:
         """
         while True:
             img = self.receiver.recv()
-            bounding_box = self.update_tracking(img)
-
-            # todo better json representation of bounding box (or multiple ones)
-            self.queue.put(bounding_box)
-
+            bounding_box: tuple = self.update_tracking(img)
+            self.queue.put(BoundingBox(id=worker_id, x=bounding_box[0], y=bounding_box[1], width=bounding_box[2],
+                                       height=bounding_box[3]))
 
 # Frames droppen um den neuen wieder zu bekommen
 # numdropped = 0

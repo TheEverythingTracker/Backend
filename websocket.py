@@ -2,6 +2,7 @@ import asyncio
 import json
 import multiprocessing
 import threading
+import uuid
 
 import websockets
 from pydantic import parse_obj_as
@@ -12,9 +13,9 @@ from main import run_control_loop
 
 def _get_event_object_from_message(message):
     event: dict = json.loads(message)
-    if event["event-type"] == dto.EventType.START_CONTROL_LOOP:
+    if event["event_type"] == dto.EventType.START_CONTROL_LOOP:
         return parse_obj_as(dto.StartControlLoopEvent, event)
-    if event["event-type"] == dto.EventType.ADD_BOUNDING_BOX:
+    if event["event_type"] == dto.EventType.ADD_BOUNDING_BOX:
         return parse_obj_as(dto.AddBoundingBoxEvent, event)
 
 
@@ -36,24 +37,24 @@ class WebSocketServer:
         print(f"Handling event for message {message}")
         event: dto.Event = _get_event_object_from_message(message)
         if event.event_type == dto.EventType.START_CONTROL_LOOP:
-            answer = await self.start_control_loop()
+            answer = await self.start_control_loop(event.request_id)
         else:
             answer = dto.AnswerEvent(message="Event unknown. Something went wrong.")
         await self.send_message(answer)
 
-    async def start_control_loop(self):
+    async def start_control_loop(self, request_id: uuid.UUID):
         if self.control_loop_thread is not None:
             if self.control_loop_thread.is_alive():
-                answer = dto.ControlLoopStartedEvent(event_type=dto.EventType.CONTROL_LOOP_STARTED,
-                                                     message="Control loop already running!")
+                answer = dto.SuccessEvent(event_type=dto.EventType.SUCCESS,
+                                          message="Control loop already running!", request_id=request_id)
                 await self.send_message(answer)
                 print("Control loop already running!")
                 return
         print("Starting control loop...")
         self.control_loop_thread = threading.Thread(target=run_control_loop, args=(True, self.bounding_box_queue))
         self.control_loop_thread.start()
-        answer = dto.ControlLoopStartedEvent(event_type=dto.EventType.CONTROL_LOOP_STARTED,
-                                             message="Control loop successfully started.")
+        answer = dto.SuccessEvent(event_type=dto.EventType.SUCCESS,
+                                  message="Control loop successfully started.", request_id=request_id)
         return answer
 
     async def __consumer_handler(self, websocket):

@@ -55,7 +55,7 @@ def run_control_loop(debug: bool, bounding_boxes_to_websocket_queue: multiproces
 
     workers = []
     if len(workers) <= num_cores:
-        worker_process = WorkerProcess(img, bounding_box, bounding_boxes_from_workers_queue)
+        worker_process = WorkerProcess(img, bounding_box, bounding_boxes_from_workers_queue, len(workers))
         workers.append(worker_process)
         print(f"worker {len(workers)} started")
     else:
@@ -66,7 +66,8 @@ def run_control_loop(debug: bool, bounding_boxes_to_websocket_queue: multiproces
     while workers:
         success, img = cap.read()  # todo: errorhandling
         frame_number += 1
-        tracking_event: dto.UpdateTrackingEvent = dto.UpdateTrackingEvent(event_type=dto.EventType.UPDATE_TRACKING, frame=frame_number, objects=[])
+        tracking_event: dto.UpdateTrackingEvent = dto.UpdateTrackingEvent(event_type=dto.EventType.UPDATE_TRACKING,
+                                                                          frame=frame_number, bounding_boxes=[])
         # todo: this loop will block until all workers have processed the current frame --> might be a performance bottleneck
         for w in workers.copy():
             if w.has_quit.is_set():
@@ -76,8 +77,7 @@ def run_control_loop(debug: bool, bounding_boxes_to_websocket_queue: multiproces
                 w.sender.send(img)
             try:
                 bounding_box = bounding_boxes_from_workers_queue.get(block=False)
-                tracking_event.bounding_boxes.append(
-                    dto.BoundingBox(x=bounding_box[0], y=bounding_box[1], width=bounding_box[2], height=bounding_box[3]))
+                tracking_event.bounding_boxes.append(bounding_box)
             except queue.Empty:
                 # todo: dont't put empty bounding boxes into queue
                 print("empty queue")

@@ -17,10 +17,13 @@ class EventType(str, Enum):
 
 class Event(BaseModel):
     event_type: EventType
+
+
+class IdEvent(Event):
     request_id: UUID
 
 
-class StartControlLoopEvent(Event):
+class StartControlLoopEvent(IdEvent):
     video_source: str  # todo validation?
 
 
@@ -32,12 +35,12 @@ class BoundingBox(BaseModel):
     height: int
 
 
-class AddBoundingBoxEvent(Event):
+class AddBoundingBoxEvent(IdEvent):
     frame: int
     bounding_box: BoundingBox
 
 
-class DeleteBoundingBoxesEvent(Event):
+class DeleteBoundingBoxesEvent(IdEvent):
     ids: List[int]
 
 
@@ -46,11 +49,11 @@ class UpdateTrackingEvent(Event):
     bounding_boxes: List[BoundingBox]
 
 
-class StopControlLoopEvent(Event):
+class StopControlLoopEvent(IdEvent):
     pass
 
 
-class AnswerEvent(Event):
+class AnswerEvent(IdEvent):
     message: str
 
 
