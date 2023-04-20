@@ -1,7 +1,14 @@
+import logging
+
 import cv2
 
+from constants import LOG_LEVEL
 from dto import BoundingBox
 from errors import TrackingError
+
+
+logger = logging.getLogger(__name__)
+logger.setLevel(LOG_LEVEL)
 
 
 class Tracker:
@@ -24,7 +31,8 @@ class Tracker:
         if success:
             return bounding_box
         else:
-            raise TrackingError('Tracking failed')
+            logger.warning("Tracking failed")
+            raise TrackingError("Tracking failed")
 
     def run_tracking_loop(self, worker_id: int):
         """
