@@ -1,8 +1,8 @@
 import logging
 import multiprocessing
 
-from config.constants import LOG_LEVEL
 from business.worker import tracking
+from config.constants import LOG_LEVEL
 from models.errors import TrackingError
 
 logger = logging.getLogger(__name__)
@@ -10,12 +10,19 @@ logger.setLevel(LOG_LEVEL)
 
 
 class WorkerProcess:
+    worker_id: int
+    receiver = None
+    sender = None
+    has_quit = None
+    process: multiprocessing.Process
+
     def __init__(self, img, bounding_box: tuple, queue: multiprocessing.Queue, worker_id: int):
         self.worker_id = worker_id
         self.receiver, self.sender = multiprocessing.Pipe()
         self.has_quit = multiprocessing.Event()
         self.process = multiprocessing.Process(target=do_work,
-                                               args=(img, bounding_box, self.receiver, queue, self.has_quit, self.worker_id))
+                                               args=(
+                                               img, bounding_box, self.receiver, queue, self.has_quit, self.worker_id))
         self.process.start()
 
 

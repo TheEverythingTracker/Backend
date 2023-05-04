@@ -2,16 +2,13 @@ import asyncio
 import json
 import logging
 import multiprocessing
-import threading
-import uuid
 
 import websockets
 from pydantic import parse_obj_as
 
-from business.controller import run_control_loop
-from models import dto
+from business.controller import Controller
 from config.constants import LOG_LEVEL
-
+from models import dto
 
 logger = logging.getLogger(__name__)
 logger.setLevel(LOG_LEVEL)
@@ -34,11 +31,11 @@ class WebSocketServer:
     # -> Müsste also als Prozess gestartet werden und als Liste verwaltet werden, wenn wir mehrere Clients bedienen wollen
 
     websocket: websockets.WebSocketServerProtocol
-    control_loop_thread: threading.Thread
+    controller: Controller
     bounding_box_queue: multiprocessing.Queue
 
     def __init__(self):
-        self.control_loop_thread = None
+        self.controller = None
         self.bounding_box_queue = multiprocessing.Queue(20)
         self.websocket = None
 
@@ -47,7 +44,9 @@ class WebSocketServer:
         try:
             event: dto.IdEvent = _get_event_object_from_message(message)
             if event.event_type == dto.EventType.START_CONTROL_LOOP:
-                answer = await self.start_control_loop(event.request_id)
+                answer = await self.start_control_loop(event)
+            elif event.event_type == dto.EventType.ADD_BOUNDING_BOX:
+                answer = await self.add_bounding_box(event)
             else:
                 answer = dto.AnswerEvent(message="not implemented")  # todo: other idea?
         except ValueError as e:
@@ -55,19 +54,28 @@ class WebSocketServer:
             answer = dto.AnswerEvent(message=e)
         await self.send_message(answer)
 
-    async def start_control_loop(self, request_id: uuid.UUID):
-        if self.control_loop_thread is not None:
-            if self.control_loop_thread.is_alive():
+    async def start_control_loop(self, event: dto.StartControlLoopEvent):
+        if self.controller is not None:
+            if self.controller.controller_thread.is_alive():
                 answer = dto.SuccessEvent(event_type=dto.EventType.SUCCESS,
-                                          message="Control loop already running!", request_id=request_id)
+                                          message="Control loop already running!", request_id=event.request_id)
                 await self.send_message(answer)
                 logger.info("Control loop already running!")
                 return
         logger.info("Starting control loop...")
-        self.control_loop_thread = threading.Thread(target=run_control_loop, args=(True, self.bounding_box_queue))
-        self.control_loop_thread.start()
+        self.controller = Controller(event.video_source, self.bounding_box_queue)
+        # todo: temporary workaround: start control loop only when we received the first bounding box
+        # self.controller.run()
+        # --------------------
         answer = dto.SuccessEvent(event_type=dto.EventType.SUCCESS,
-                                  message="Control loop successfully started.", request_id=request_id)
+                                  message="Control loop successfully started.", request_id=event.request_id)
+        return answer
+
+    async def add_bounding_box(self, event: dto.AddBoundingBoxEvent):
+        self.controller.add_worker(event.bounding_box)
+        self.controller.start_thread()
+        answer = dto.SuccessEvent(event_type=dto.EventType.SUCCESS,
+                                  message="Added bounding box successfully.", request_id=event.request_id)
         return answer
 
     async def __consumer_handler(self, websocket):
