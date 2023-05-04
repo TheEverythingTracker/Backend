@@ -13,26 +13,30 @@ class WorkerProcess:
     worker_id: int
     receiver = None
     sender = None
-    has_quit = None
+    should_exit: multiprocessing.Event = None
     process: multiprocessing.Process
 
     def __init__(self, img, bounding_box: tuple, queue: multiprocessing.Queue, worker_id: int):
         self.worker_id = worker_id
         self.receiver, self.sender = multiprocessing.Pipe()
-        self.has_quit = multiprocessing.Event()
+        self.should_exit = multiprocessing.Event()
         self.process = multiprocessing.Process(target=do_work,
                                                args=(
-                                               img, bounding_box, self.receiver, queue, self.has_quit, self.worker_id))
+                                                   img, bounding_box, self.receiver, queue, self.should_exit,
+                                                   self.worker_id))
         self.process.start()
 
 
 def do_work(img, bounding_box: tuple, receiver: multiprocessing.Pipe, queue: multiprocessing.Queue,
-            has_quit: multiprocessing.Event, worker_id: int):
+            should_exit: multiprocessing.Event, worker_id: int):
     tracker = tracking.Tracker(img, bounding_box, receiver, queue)
     try:
-        tracker.run_tracking_loop(worker_id)
+        tracker.run_tracking_loop(worker_id, should_exit)
     except (TrackingError, IOError) as e:
         logger.warning(e)
-        has_quit.set()
+        should_exit.set()
         exit(1)
+    finally:
+        logger.info(f"worker {worker_id} has finished execution")
+        exit(0)
 # TODO: raise process deletion from process array

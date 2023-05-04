@@ -8,7 +8,7 @@ from pydantic import BaseModel
 class EventType(str, Enum):
     START_CONTROL_LOOP = "start-control-loop"
     ADD_BOUNDING_BOX = "add-bounding-box"
-    DELETE_BOUNDING_BOX = "delete-bounding-box"
+    DELETE_BOUNDING_BOX = "delete-bounding-boxes"
     UPDATE_TRACKING = "update-tracking"
     STOP_CONTROL_LOOP = "stop-control-loop"
     SUCCESS = "success"

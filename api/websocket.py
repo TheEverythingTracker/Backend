@@ -20,6 +20,8 @@ def _get_event_object_from_message(message):
         return parse_obj_as(dto.StartControlLoopEvent, event)
     if event["event_type"] == dto.EventType.ADD_BOUNDING_BOX:
         return parse_obj_as(dto.AddBoundingBoxEvent, event)
+    if event["event_type"] == dto.EventType.DELETE_BOUNDING_BOX:
+        return parse_obj_as(dto.DeleteBoundingBoxesEvent, event)
     else:
         warning_message = f"event_type {event['event_type']} unknown"
         logger.warning(warning_message)
@@ -47,6 +49,8 @@ class WebSocketServer:
                 answer = await self.start_control_loop(event)
             elif event.event_type == dto.EventType.ADD_BOUNDING_BOX:
                 answer = await self.add_bounding_box(event)
+            elif event.event_type == dto.EventType.DELETE_BOUNDING_BOX:
+                answer = await self.delete_bounding_box(event)
             else:
                 answer = dto.AnswerEvent(message="not implemented")  # todo: other idea?
         except ValueError as e:
@@ -76,6 +80,12 @@ class WebSocketServer:
         self.controller.start_thread()
         answer = dto.SuccessEvent(event_type=dto.EventType.SUCCESS,
                                   message="Added bounding box successfully.", request_id=event.request_id)
+        return answer
+
+    async def delete_bounding_box(self, event: dto.DeleteBoundingBoxesEvent):
+        self.controller.stop_workers(event.ids)
+        answer = dto.SuccessEvent(event_type=dto.EventType.SUCCESS,
+                                  message="Deleted bounding boxes successfully.", request_id=event.request_id)
         return answer
 
     async def __consumer_handler(self, websocket):

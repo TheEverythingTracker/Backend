@@ -1,11 +1,11 @@
 import logging
+import multiprocessing
 
 import cv2
 
 from config.constants import LOG_LEVEL
 from models.dto import BoundingBox
 from models.errors import TrackingError
-
 
 logger = logging.getLogger(__name__)
 logger.setLevel(LOG_LEVEL)
@@ -34,12 +34,14 @@ class Tracker:
             logger.warning("Tracking failed")
             raise TrackingError("Tracking failed")
 
-    def run_tracking_loop(self, worker_id: int):
+    def run_tracking_loop(self, worker_id: int, should_exit: multiprocessing.Event):
         """
         Run the tracking loop and fill the queue with tracking data
         :return:
         """
         while True:
+            if should_exit.is_set():
+                return
             img = self.receiver.recv()
             bounding_box: tuple = self.update_tracking(img)
             self.queue.put(BoundingBox(id=worker_id, x=bounding_box[0], y=bounding_box[1], width=bounding_box[2],

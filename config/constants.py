@@ -1,4 +1,4 @@
-from logging import INFO
+from logging import INFO, DEBUG
 
-LOG_LEVEL = INFO
+LOG_LEVEL = DEBUG
 VIDEO_SOURCE = '.resources/race_car.mp4'
