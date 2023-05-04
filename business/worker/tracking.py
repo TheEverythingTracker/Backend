@@ -2,9 +2,9 @@ import logging
 
 import cv2
 
-from constants import LOG_LEVEL
-from dto import BoundingBox
-from errors import TrackingError
+from config.constants import LOG_LEVEL
+from models.dto import BoundingBox
+from models.errors import TrackingError
 
 
 logger = logging.getLogger(__name__)

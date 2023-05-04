@@ -8,9 +8,9 @@ import uuid
 import websockets
 from pydantic import parse_obj_as
 
-import dto
-from constants import LOG_LEVEL
-from main import run_control_loop
+from business.controller import run_control_loop
+from models import dto
+from config.constants import LOG_LEVEL
 
 
 logger = logging.getLogger(__name__)

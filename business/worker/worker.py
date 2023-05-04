@@ -1,9 +1,9 @@
 import logging
 import multiprocessing
 
-from constants import LOG_LEVEL
-from worker import tracking
-from errors import TrackingError
+from config.constants import LOG_LEVEL
+from business.worker import tracking
+from models.errors import TrackingError
 
 logger = logging.getLogger(__name__)
 logger.setLevel(LOG_LEVEL)
