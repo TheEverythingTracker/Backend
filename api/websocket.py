@@ -34,11 +34,11 @@ class WebSocketServer:
 
     websocket: websockets.WebSocketServerProtocol
     controller: Controller
-    bounding_box_queue: multiprocessing.Queue
+    update_tracking_event_queue: multiprocessing.Queue
 
     def __init__(self):
         self.controller = None
-        self.bounding_box_queue = multiprocessing.Queue(20)
+        self.update_tracking_event_queue = multiprocessing.Queue(20)
         self.websocket = None
 
     async def __handle_event(self, message: str):  # todo: mit Frontend abstimmen, wie die JSON-Formate aussehen sollen
@@ -67,7 +67,7 @@ class WebSocketServer:
                 logger.info("Control loop already running!")
                 return
         logger.info("Starting control loop...")
-        self.controller = Controller(event.video_source, self.bounding_box_queue)
+        self.controller = Controller(event.video_source, self.update_tracking_event_queue)
         # todo: temporary workaround: start control loop only when we received the first bounding box
         # self.controller.run()
         # --------------------
@@ -99,7 +99,7 @@ class WebSocketServer:
         while True:
             # todo: discard frames if queue full?
             loop = asyncio.get_running_loop()
-            message = await loop.run_in_executor(None, self.bounding_box_queue.get)
+            message = await loop.run_in_executor(None, self.update_tracking_event_queue.get)
             logger.debug(f"producer_handler: sending {message}")
             await self.send_message(message)
             # If you run a loop that contains only synchronous operations and a send() call,

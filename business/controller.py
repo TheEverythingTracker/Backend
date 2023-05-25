@@ -18,7 +18,7 @@ logger.setLevel(LOG_LEVEL)
 
 class Controller:
     num_cores: int
-    video_source: str
+    video_capture: cv2.VideoCapture
     should_quit: bool
     workers: List[WorkerProcess]
     bounding_boxes_to_websocket_queue: multiprocessing.Queue
@@ -27,18 +27,20 @@ class Controller:
 
     def __init__(self, video_source: str, bounding_boxes_to_websocket_queue: multiprocessing.Queue):
         self.num_cores = multiprocessing.cpu_count()
-        self.video_source = video_source
+        self.video_capture = cv2.VideoCapture(video_source)
         self.should_quit = False
         self.workers = []
         self.bounding_boxes_to_websocket_queue = bounding_boxes_to_websocket_queue
         self.bounding_boxes_from_workers_queue = multiprocessing.Queue()
         self.controller_thread = None
 
+    def __del__(self):
+        self.video_capture.release()
+
     def add_worker(self, bounding_box: dto.BoundingBox):  # , frame):  # todo: frame should be numpy ndarray?
-        # ----- temporary workaround: get frame as parameter -------
-        cap = cv2.VideoCapture(self.video_source)
-        success, img = cap.read()
-        cap.release()
+        # ----- temporary workaround until we get frame as parameter -------
+        # ----- only makes sense in context of only adding one worker -------
+        _, img = self.video_capture.read()
         # ----------------------------------
         if len(self.workers) <= self.num_cores:
             worker_process: WorkerProcess = WorkerProcess(img, (
@@ -68,12 +70,11 @@ class Controller:
         self.controller_thread = None
 
     def __run(self):
-        video_capture: cv2.VideoCapture = cv2.VideoCapture(self.video_source)
         # todo: is there a better way to get frame numbers?
         frame_number: int = 0
         while not self.should_quit:
             print(frame_number)
-            success, img = video_capture.read()  # todo: errorhandling
+            _, img = self.video_capture.read()  # todo: errorhandling
             frame_number += 1
             tracking_event: dto.UpdateTrackingEvent = dto.UpdateTrackingEvent(event_type=dto.EventType.UPDATE_TRACKING,
                                                                               frame=frame_number, bounding_boxes=[])
@@ -98,7 +99,6 @@ class Controller:
                 logger.debug("Debug Output failed")
 
         # Cleanup
-        video_capture.release()
         self.should_quit = False
         logger.info("Goodbye!")
 
