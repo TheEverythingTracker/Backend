@@ -1,31 +1,20 @@
-import asyncio
-from typing import List
-
-import cv2
-
 import logging
-from models import dto
-from api import websocket
+import uvicorn
+from fastapi import FastAPI
+
 from config.constants import LOG_LEVEL
 
 logging.basicConfig(format='%(asctime)s %(levelname)s %(message)s')
 logger = logging.getLogger(__name__)
 logger.setLevel(LOG_LEVEL)
 
-
-def start_websocket_server():
-    """
-    Start a server for sending the tracking data over websocket
-    """
-    websocket_server = websocket.WebSocketServer()
-    logger.info("starting websocket server")
-    asyncio.run(websocket_server.run())
-    return websocket_server
+app: FastAPI = FastAPI(title="everythingTracker")
 
 
-def main():
-    websocket_server: websocket.WebSocketServer = start_websocket_server()
+@app.get("/health")
+def get_health():
+    return "I'm ok"
 
 
 if __name__ == '__main__':
-    main()
+    uvicorn.run(app, host="0.0.0.0", port=8000)

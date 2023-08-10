@@ -7,9 +7,9 @@ readme = "README.md"
 
 [tool.poetry.dependencies]
 python = "^3.11"
-opencv-python = "^4.7.0.72"
-websockets = "^11.0.1"
-pydantic = "^1.10.7"
+opencv-python = "^4.7.0.76"
+fastapi = "^0.101.0"
+uvicorn = {extras = ["standard"], version = "^0.23.2"}
 
 
 
