@@ -1,7 +1,8 @@
 from enum import Enum
-from typing import List
+from typing import List, Any
 from uuid import UUID
 
+import numpy as np
 from pydantic import BaseModel
 
 
@@ -13,6 +14,11 @@ class EventType(str, Enum):
     STOP_CONTROL_LOOP = "stop-control-loop"
     SUCCESS = "success"
     FAILURE = "failure"
+
+
+class VideoFrame(BaseModel):
+    frame_number: int
+    frame: Any
 
 
 class Event(BaseModel):

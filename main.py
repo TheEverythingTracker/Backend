@@ -22,7 +22,7 @@ async def connect_websocket(websocket: WebSocket, session_id: UUID):
         await connection_manager.connect(session_id, websocket)
         logger.info(f"Session '{session_id}' opened")
         session: Session = Session(session_id, websocket)
-        await session.start_handlers()
+        await session.start_event_handlers()
         del session
     except WebSocketDisconnect as e:
         logger.error(e)
