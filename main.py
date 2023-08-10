@@ -5,10 +5,11 @@ import uvicorn
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 
 import connection_manager
-from config.constants import LOG_LEVEL
+from business.session import Session
+from config.constants import LOG_LEVEL, LOG_FORMAT
 from models.errors import DuplicateSessionError
 
-logging.basicConfig(format='%(asctime)s %(levelname)s %(message)s')
+logging.basicConfig(format=LOG_FORMAT)
 logger = logging.getLogger(__name__)
 logger.setLevel(LOG_LEVEL)
 
@@ -20,23 +21,17 @@ async def connect_websocket(websocket: WebSocket, session_id: UUID):
     try:
         await connection_manager.connect(session_id, websocket)
         logger.info(f"Session '{session_id}' opened")
-        # todo session object anlegen
-        await websocket.send_text("Hello World")
-        async for message in websocket.iter_text():
-            logger.debug(f"{session_id}: {message}")
-            if message == "bye":
-                await connection_manager.close_connection(session_id)
-                break
+        session: Session = Session(session_id, websocket)
+        await session.start_handlers()
+        del session
     except WebSocketDisconnect as e:
         logger.error(e)
-        connection_manager.remove_connection(session_id)
-        logger.info(f"Session '{session_id}' closed")
     except DuplicateSessionError as e:
         logger.error(e)
         logger.info(f"Session '{session_id}' rejected")
     finally:
-        pass
-        # todo session object zerstören
+        connection_manager.remove_connection(session_id)
+        logger.info(f"Session '{session_id}' closed")
 
 
 if __name__ == '__main__':
