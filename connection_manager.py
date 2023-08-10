@@ -20,7 +20,7 @@ async def connect(connection_id: UUID, websocket: WebSocket):
         __active_connections[connection_id] = websocket
     else:
         await websocket.close(code=WebsocketStatusCode.PROTOCOL_ERROR)
-        return DuplicateSessionError(f"Session with ID '{connection_id}' already exists")
+        raise DuplicateSessionError(f"Session with ID '{connection_id}' already exists")
 
 
 def remove_connection(connection_id: UUID):

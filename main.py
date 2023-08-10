@@ -1,5 +1,4 @@
 import logging
-import time
 from uuid import UUID
 
 import uvicorn
@@ -7,25 +6,37 @@ from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 
 import connection_manager
 from config.constants import LOG_LEVEL
+from models.errors import DuplicateSessionError
 
 logging.basicConfig(format='%(asctime)s %(levelname)s %(message)s')
 logger = logging.getLogger(__name__)
 logger.setLevel(LOG_LEVEL)
 
-app: FastAPI = FastAPI(title="everythingTracker")
+app: FastAPI = FastAPI(title="TheEverythingTracker")
 
 
-@app.websocket("/{session_id}")
+@app.websocket("/websocket/{session_id}")
 async def connect_websocket(websocket: WebSocket, session_id: UUID):
-    await connection_manager.connect(session_id, websocket)
-    logger.info(f"Session '{session_id}' opened")
-
     try:
-        time.sleep(1)
+        await connection_manager.connect(session_id, websocket)
+        logger.info(f"Session '{session_id}' opened")
+        # todo session object anlegen
         await websocket.send_text("Hello World")
-    except WebSocketDisconnect:
+        async for message in websocket.iter_text():
+            logger.debug(f"{session_id}: {message}")
+            if message == "bye":
+                await connection_manager.close_connection(session_id)
+                break
+    except WebSocketDisconnect as e:
+        logger.error(e)
         connection_manager.remove_connection(session_id)
         logger.info(f"Session '{session_id}' closed")
+    except DuplicateSessionError as e:
+        logger.error(e)
+        logger.info(f"Session '{session_id}' rejected")
+    finally:
+        pass
+        # todo session object zerstören
 
 
 if __name__ == '__main__':
