@@ -4,3 +4,7 @@ class TrackingError(Exception):
 
 class OutOfResourcesError(Exception):
     pass
+
+
+class DuplicateSessionError(Exception):
+    pass
