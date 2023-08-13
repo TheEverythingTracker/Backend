@@ -5,7 +5,7 @@ from collections.abc import Sequence
 
 import cv2
 
-from config.constants import LOG_LEVEL, LOG_FORMAT
+from config.constants import LOG_LEVEL, LOG_FORMAT, QUEUE_SIZE
 from models.dto import BoundingBox, VideoFrame
 from models.errors import TrackingError
 
@@ -14,8 +14,8 @@ logger = logging.getLogger(__name__)
 logger.setLevel(LOG_LEVEL)
 
 
-class TrackerThread:
-    def __init__(self, object_id, input_queue: queue.Queue[VideoFrame], output_queue: queue.Queue):
+class VideoFrameConsumerThread:
+    def __init__(self, object_id, input_queue: queue.Queue[VideoFrame]):
         """
         initialize object tracker by object selection in first frame
         :return: created tracker instance
@@ -24,7 +24,7 @@ class TrackerThread:
         self.tracker = tracker
         self.object_id = object_id
         self.input_queue = input_queue
-        self.output_queue = output_queue
+        self.output_queue = queue.Queue(QUEUE_SIZE)
         self.thread: threading.Thread = threading.Thread(target=self.run_tracking_loop)
         self.should_quit = threading.Event()
 

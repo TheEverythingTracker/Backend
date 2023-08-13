@@ -4,7 +4,7 @@ import threading
 
 import cv2
 
-from config.constants import LOG_FORMAT, LOG_LEVEL
+from config.constants import LOG_FORMAT, LOG_LEVEL, QUEUE_SIZE
 from models.dto import VideoFrame
 
 logging.basicConfig(format=LOG_FORMAT)
@@ -17,10 +17,10 @@ class VideoFrameProducerThread:
     video_source: str
     video_capture: cv2.VideoCapture
 
-    def __init__(self, queue_size: int):
+    def __init__(self):
         self.should_quit: threading.Event = threading.Event()
         self.thread: threading.Thread = threading.Thread(target=self.read_video_frames)
-        self.queue: queue.Queue = queue.Queue(maxsize=queue_size)
+        self.queue: queue.Queue = queue.Queue(QUEUE_SIZE)
 
     def start(self, video_source: str):
         logger.debug(f"Starting video frame producer thread for {video_source}")
@@ -31,9 +31,7 @@ class VideoFrameProducerThread:
         self.thread.start()
 
     def get_next_frame(self):
-        # use timeout because otherwise we would block forever if there are no new frames
-        # 1 second timeout should be fine because reading a frame should be way faster than that
-        return self.queue.get(timeout=1)
+        return self.queue.get()
 
     def quit(self):
         self.should_quit.set()
