@@ -32,7 +32,7 @@ async def connect_websocket(websocket: WebSocket, session_id: UUID):
         session = Session(session_id, websocket)
         await session.consume_websocket_events()
     except WebSocketDisconnect as e:
-        logger.error(f"WebsocketDisconnect with Reason: {e}")
+        logger.warning(f"WebsocketDisconnect with Reason: {e}")
         connection_manager.remove_connection(session_id)
     finally:
         del session

@@ -25,6 +25,7 @@ class Session:
         logger.debug(f"Session '{session_id}' created")
 
     def __del__(self):
+        logger.debug(f"Destroying Session '{self.session_id}'")
         self.video_frame_producer_thread.quit()
         self.video_frame_producer_thread.join()
         logger.debug(f"Session '{self.session_id}' destroyed")
@@ -42,9 +43,9 @@ class Session:
                 answer = await self.__handle_event(message)
                 logger.debug(f"Session '{self.session_id}' answering: {answer}")
                 await self.websocket.send_json(answer.model_dump_json())
-                logger.info(f"Session '{self.session_id}' stopped consuming events")
         except Exception as e:
             logger.error(e)
+            logger.info(f"Session '{self.session_id}' stopped consuming events")
             raise e
 
     async def __handle_event(self, message: dict):  # todo: mit Frontend abstimmen, wie die JSON-Formate aussehen sollen

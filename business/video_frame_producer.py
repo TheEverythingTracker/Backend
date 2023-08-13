@@ -54,6 +54,7 @@ class VideoFrameProducerThread:
                 if not success:
                     self.should_quit.set()
                 frame_number += 1
+                # this blocks until the queue has a free slot
                 self.queue.put(VideoFrame(frame_number=frame_number, img=img))
                 logger.debug(f"Frame {frame_number} read")
         finally:
