@@ -13,6 +13,7 @@ logger.setLevel(LOG_LEVEL)
 
 
 class VideoFrameProducerThread:
+    """Produce video frames. Does not support changing the video source"""
     video_source: str
     video_capture: cv2.VideoCapture
 
@@ -23,12 +24,14 @@ class VideoFrameProducerThread:
 
     def start(self, video_source: str):
         logger.debug(f"Starting video frame producer thread for {video_source}")
+        if self.thread.is_alive():
+            return
         self.video_source: str = video_source
         self.video_capture: cv2.VideoCapture = cv2.VideoCapture(self.video_source)
         self.thread.start()
 
     def get_next_frame(self):
-        # use timeout beacuse otherwise we would block forever if there are no new frames
+        # use timeout because otherwise we would block forever if there are no new frames
         # 1 second timeout should be fine because reading a frame should be way faster than that
         return self.queue.get(timeout=1)
 
@@ -36,7 +39,9 @@ class VideoFrameProducerThread:
         self.should_quit.set()
 
     def join(self):
-        self.thread.join()
+        # only join if the thread has been started
+        if self.thread.ident is not None:
+            self.thread.join()
 
     def has_quit(self):
         return self.should_quit.is_set()

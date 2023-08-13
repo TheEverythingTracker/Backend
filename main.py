@@ -8,6 +8,7 @@ import connection_manager
 from business.session import Session
 from config.constants import LOG_LEVEL, LOG_FORMAT
 from models.errors import DuplicateSessionError
+from models.websocket_status_codes import WebsocketStatusCode
 
 logging.basicConfig(format=LOG_FORMAT)
 logger = logging.getLogger(__name__)
@@ -20,17 +21,21 @@ app: FastAPI = FastAPI(title="TheEverythingTracker")
 async def connect_websocket(websocket: WebSocket, session_id: UUID):
     try:
         await connection_manager.connect(session_id, websocket)
-        logger.info(f"Session '{session_id}' opened")
-        session: Session = Session(session_id, websocket)
-        await session.start_event_handlers()
-        del session
-    except WebSocketDisconnect as e:
-        logger.error(e)
     except DuplicateSessionError as e:
         logger.error(e)
+        await websocket.close(code=WebsocketStatusCode.PROTOCOL_ERROR, reason=str(e))
         logger.info(f"Session '{session_id}' rejected")
+        return
+
+    try:
+        logger.info(f"Session '{session_id}' opened")
+        session = Session(session_id, websocket)
+        await session.consume_websocket_events()
+    except WebSocketDisconnect as e:
+        logger.error(f"WebsocketDisconnect with Reason: {e}")
+        connection_manager.remove_connection(session_id)
     finally:
-        await connection_manager.close_connection(session_id)
+        del session
         logger.info(f"Session '{session_id}' closed")
 
 
