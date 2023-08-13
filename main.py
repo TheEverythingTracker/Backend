@@ -30,7 +30,7 @@ async def connect_websocket(websocket: WebSocket, session_id: UUID):
         logger.error(e)
         logger.info(f"Session '{session_id}' rejected")
     finally:
-        connection_manager.remove_connection(session_id)
+        await connection_manager.close_connection(session_id)
         logger.info(f"Session '{session_id}' closed")
 
 

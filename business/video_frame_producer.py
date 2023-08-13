@@ -13,11 +13,18 @@ logger.setLevel(LOG_LEVEL)
 
 
 class VideoFrameProducerThread:
-    def __init__(self, video_source: str, queue_size: int):
-        self.video_source: str = video_source
-        self.stop: threading.Event = threading.Event()
+    video_source: str
+    video_capture: cv2.VideoCapture
+
+    def __init__(self, queue_size: int):
+        self.should_quit: threading.Event = threading.Event()
         self.thread: threading.Thread = threading.Thread(target=self.read_video_frames)
         self.queue: queue.Queue = queue.Queue(maxsize=queue_size)
+
+    def start(self, video_source: str):
+        logger.debug(f"Starting video frame producer thread for {video_source}")
+        self.video_source: str = video_source
+        self.video_capture: cv2.VideoCapture = cv2.VideoCapture(self.video_source)
         self.thread.start()
 
     def get_next_frame(self):
@@ -26,25 +33,23 @@ class VideoFrameProducerThread:
         return self.queue.get(timeout=1)
 
     def quit(self):
-        self.stop.set()
-
-    def has_quit(self):
-        return self.stop.is_set()
+        self.should_quit.set()
 
     def join(self):
         self.thread.join()
 
+    def has_quit(self):
+        return self.should_quit.is_set()
+
     def read_video_frames(self):
-        video_capture: cv2.VideoCapture = cv2.VideoCapture(self.video_source)
         frame_number: int = 0
-        while True:
-            if self.stop.is_set():
-                return
-            success, img = video_capture.read()
-            if not success:
-                video_capture.release()
-                self.stop.set()
-                return
-            frame_number += 1
-            self.queue.put(VideoFrame(frame_number=frame_number, frame=img))
-            logger.debug(f"Frame {frame_number} read")
+        try:
+            while not self.has_quit():
+                success, img = self.video_capture.read()
+                if not success:
+                    self.should_quit.set()
+                frame_number += 1
+                self.queue.put(VideoFrame(frame_number=frame_number, img=img))
+                logger.debug(f"Frame {frame_number} read")
+        finally:
+            self.video_capture.release()

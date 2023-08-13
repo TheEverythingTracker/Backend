@@ -1,5 +1,5 @@
 from enum import Enum
-from typing import List, Any
+from typing import List, Any, Optional
 from uuid import UUID
 
 import numpy as np
@@ -18,7 +18,7 @@ class EventType(str, Enum):
 
 class VideoFrame(BaseModel):
     frame_number: int
-    frame: Any
+    img: Any
 
 
 class Event(BaseModel):
@@ -35,6 +35,7 @@ class StartControlLoopEvent(IdEvent):
 
 class BoundingBox(BaseModel):
     id: int
+    frame_number: Optional[int]
     x: int
     y: int
     width: int
@@ -42,7 +43,7 @@ class BoundingBox(BaseModel):
 
 
 class AddBoundingBoxEvent(IdEvent):
-    frame: int
+    frame_number: int
     bounding_box: BoundingBox
 
 
@@ -51,7 +52,7 @@ class DeleteBoundingBoxesEvent(IdEvent):
 
 
 class UpdateTrackingEvent(Event):
-    frame: int
+    frame_number: int
     bounding_boxes: List[BoundingBox]
 
 
