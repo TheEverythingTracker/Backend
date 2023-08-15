@@ -29,6 +29,8 @@ class VideoFrameConsumerThread:
         self.should_quit = threading.Event()
 
     def start(self, initial_bounding_box: BoundingBox):
+        logger.debug(
+            f"Starting video frame consumer thread for {initial_bounding_box.id} on frame {initial_bounding_box.frame_number}")
         frame: VideoFrame = self.input_queue.get()
         bounding_box_coordinates: tuple = (
             initial_bounding_box.x, initial_bounding_box.y, initial_bounding_box.width, initial_bounding_box.height)
@@ -37,7 +39,10 @@ class VideoFrameConsumerThread:
 
     def quit(self):
         self.should_quit.set()
-        self.thread.join()
+        # only join if the thread has been started
+        if self.thread.ident is not None:
+            self.thread.join()
+        logger.debug(f"Video frame consumer thread exited")
 
     def has_quit(self):
         return self.should_quit.is_set()
@@ -60,6 +65,7 @@ class VideoFrameConsumerThread:
             self.output_queue.put(
                 BoundingBox(id=self.object_id, frame_number=frame.frame_number, x=bounding_box[0], y=bounding_box[1],
                             width=bounding_box[2], height=bounding_box[3]))
+            logger.debug(f"Tracker {self.object_id} processed frame {frame.frame_number}")
 
 # Frames droppen um den neuen wieder zu bekommen
 # numdropped = 0

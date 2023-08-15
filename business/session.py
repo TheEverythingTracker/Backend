@@ -27,12 +27,14 @@ class Session:
         self.session_id = session_id
         self.websocket = websocket
         self.video_frame_producer = VideoFrameProducerThread()
+        self.tracking_update_sender = TrackingUpdateSenderThread(self.websocket)
         logger.debug(f"Session '{session_id}' created")
 
     def __del__(self):
         logger.debug(f"Destroying Session '{self.session_id}'")
         self.video_frame_producer.quit()
-        self.video_frame_producer.join()
+        self.video_frame_consumer.quit()
+        self.tracking_update_sender.quit()
         logger.debug(f"Session '{self.session_id}' destroyed")
 
     def start_control_loop(self, event: dto.StartControlLoopEvent):
@@ -42,7 +44,8 @@ class Session:
     def add_bounding_box(self, event: dto.AddBoundingBoxEvent):
         self.video_frame_consumer = VideoFrameConsumerThread(event.bounding_box.id, self.video_frame_producer.queue)
         self.video_frame_consumer.start(event.bounding_box)
-        self.tracking_update_sender = TrackingUpdateSenderThread(self.websocket, self.video_frame_consumer.output_queue)
+        self.tracking_update_sender.add_queue(self.video_frame_consumer.output_queue)
+        self.tracking_update_sender.start()
         return dto.SuccessEvent(event_type=EventType.SUCCESS, request_id=event.request_id, message="OK.")
 
     async def consume_websocket_events(self):

@@ -35,11 +35,10 @@ class VideoFrameProducerThread:
 
     def quit(self):
         self.should_quit.set()
-
-    def join(self):
         # only join if the thread has been started
         if self.thread.ident is not None:
             self.thread.join()
+        logger.debug(f"Video frame producer thread exited")
 
     def has_quit(self):
         return self.should_quit.is_set()
