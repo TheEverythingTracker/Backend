@@ -15,13 +15,18 @@ logger.setLevel(LOG_LEVEL)
 
 
 class VideoFrameConsumerThread:
-    def __init__(self, object_id, input_queue: queue.Queue[VideoFrame]):
+    tracker: cv2.Tracker
+    object_id: int
+    input_queue: queue.Queue[VideoFrame]
+    thread: threading.Thread
+    should_quit: threading.Event
+
+    def __init__(self, object_id: int, input_queue: queue.Queue[VideoFrame]):
         """
         initialize object tracker by object selection in first frame
         :return: created tracker instance
         """
-        tracker = cv2.TrackerMIL.create()
-        self.tracker = tracker
+        self.tracker = cv2.TrackerMIL.create()
         self.object_id = object_id
         self.input_queue = input_queue
         self.output_queue = queue.Queue(QUEUE_SIZE)

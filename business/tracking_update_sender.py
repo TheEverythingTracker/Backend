@@ -29,6 +29,7 @@ class TrackingUpdateSenderThread:
     def start(self):
         logger.debug(f"Starting tracking update sender thread")
         if self.thread.is_alive():
+            logger.debug(f"Tracking update sender thread already running")
             return
         self.thread.start()
 
