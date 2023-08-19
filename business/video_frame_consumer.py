@@ -18,17 +18,18 @@ class VideoFrameConsumerThread:
     tracker: cv2.Tracker
     object_id: int
     input_queue: queue.Queue[VideoFrame]
+    output_queue: queue.Queue[BoundingBox]
     thread: threading.Thread
     should_quit: threading.Event
 
-    def __init__(self, object_id: int, input_queue: queue.Queue[VideoFrame]):
+    def __init__(self, object_id: int):
         """
         initialize object tracker by object selection in first frame
         :return: created tracker instance
         """
         self.tracker = cv2.TrackerMIL.create()
         self.object_id = object_id
-        self.input_queue = input_queue
+        self.input_queue = queue.Queue(QUEUE_SIZE)
         self.output_queue = queue.Queue(QUEUE_SIZE)
         self.thread: threading.Thread = threading.Thread(target=self.run_tracking_loop)
         self.should_quit = threading.Event()

@@ -28,10 +28,10 @@ class TrackingUpdateSenderThread:
 
     def start(self):
         logger.debug(f"Starting tracking update sender thread")
-        if self.thread.is_alive():
-            logger.debug(f"Tracking update sender thread already running")
-            return
         self.thread.start()
+
+    def is_running(self):
+        return self.thread.is_alive()
 
     def add_queue(self, input_queue: queue.Queue):
         self.input_queues.append(input_queue)

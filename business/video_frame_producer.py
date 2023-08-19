@@ -16,22 +16,33 @@ class VideoFrameProducerThread:
     """Produce video frames. Does not support changing the video source"""
     video_source: str
     video_capture: cv2.VideoCapture
+    should_quit: threading.Event
+    thread: threading.Thread
+    queues: list[queue.Queue[VideoFrame]]
 
     def __init__(self):
-        self.should_quit: threading.Event = threading.Event()
-        self.thread: threading.Thread = threading.Thread(target=self.read_video_frames)
-        self.queue: queue.Queue = queue.Queue(QUEUE_SIZE)
+        self.should_quit = threading.Event()
+        self.thread = threading.Thread(target=self.read_video_frames)
+        self.queues = []
 
-    def start(self, video_source: str):
-        logger.debug(f"Starting video frame producer thread for {video_source}")
+    def load(self, video_source: str):
+        logger.debug(f"Loading {video_source}")
         if self.thread.is_alive():
             return
         self.video_source: str = video_source
         self.video_capture: cv2.VideoCapture = cv2.VideoCapture(self.video_source)
+
+    def start(self):
         self.thread.start()
 
-    def get_next_frame(self):
-        return self.queue.get()
+    def is_running(self):
+        return self.thread.is_alive()
+
+    def add_queue(self, output_queue: queue.Queue[VideoFrame]):
+        self.queues.append(output_queue)
+
+    def remove_queue(self, queue_to_remove: queue.Queue[VideoFrame]):
+        self.queues.remove(queue_to_remove)
 
     def quit(self):
         self.should_quit.set()
@@ -52,7 +63,8 @@ class VideoFrameProducerThread:
                     self.should_quit.set()
                 frame_number += 1
                 # this blocks until the queue has a free slot
-                self.queue.put(VideoFrame(frame_number=frame_number, img=img))
+                for output_queue in self.queues:
+                    output_queue.put(VideoFrame(frame_number=frame_number, img=img))
                 logger.debug(f"Frame {frame_number} read")
         finally:
             self.video_capture.release()
