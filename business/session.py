@@ -56,7 +56,14 @@ class Session:
         return dto.SuccessEvent(event_type=EventType.SUCCESS, request_id=event.request_id, message="OK.")
 
     def delete_bounding_box(self, event: dto.DeleteBoundingBoxesEvent):
-        raise NotImplementedError
+        for object_id in event.ids:
+            for consumer in self.video_frame_consumers:
+                if object_id is consumer.object_id:
+                    consumer.quit()
+                    self.video_frame_producer.remove_queue(consumer.input_queue)
+                    self.tracking_update_sender.remove_queue(consumer.output_queue)
+                    self.video_frame_consumers.remove(consumer)
+        return dto.SuccessEvent(event_type=EventType.SUCCESS, request_id=event.request_id, message="OK.")
 
     async def consume_websocket_events(self):
         try:
