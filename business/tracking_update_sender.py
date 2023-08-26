@@ -81,7 +81,8 @@ class TrackingUpdateSenderThread:
         while not self.has_quit():
             bounding_boxes: list[BoundingBox] = []
 
-            for update_queue_item in self.update_queue_items:
+            for index, update_queue_item in enumerate(self.update_queue_items):
+                # here the update sender stops trackers from tracking
                 update_queue_item.latest_bounding_box = update_queue_item.input_queue.get()
                 update_queue_item.latest_frame = update_queue_item.latest_bounding_box.frame_number
 
