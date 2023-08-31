@@ -2,10 +2,11 @@ import asyncio
 import logging
 import queue
 import threading
+import time
 
 from fastapi import WebSocket
 
-from config.constants import LOG_FORMAT, LOG_LEVEL
+from config.constants import LOG_FORMAT, LOG_LEVEL, SENDER_QUEUE_TIMEOUT
 from models.dto import BoundingBox, UpdateTrackingEvent
 from models.dto import EventType
 
@@ -51,7 +52,10 @@ class TrackingUpdateSenderThread:
         temp_list = self.update_queue_items.copy()
         for item in temp_list:
             if item.input_queue is input_queue:
+                print("---Trying to delete ferom sende--")
                 self.update_queue_items.remove(item)
+                print("---Delted  to delete ferom sende--")
+
 
     def quit(self):
         self.should_quit.set()
@@ -77,28 +81,44 @@ class TrackingUpdateSenderThread:
                 max_frame_number = item.latest_frame
         return max_frame_number
 
+    def print_bounding_boxes(self, bounding_boxes):
+        for index, bounding_box in enumerate(bounding_boxes):
+            frame_num = bounding_box.frame_number if bounding_box is not None else "NONE"
+            logger.debug(f"Sending bounding box {frame_num} from queue {index}")
+
     async def send_updates(self):
         while not self.has_quit():
             bounding_boxes: list[BoundingBox] = []
 
             for index, update_queue_item in enumerate(self.update_queue_items):
                 # here the update sender stops trackers from tracking
-                update_queue_item.latest_bounding_box = update_queue_item.input_queue.get()
-                update_queue_item.latest_frame = update_queue_item.latest_bounding_box.frame_number
+                try:
+                    update_queue_item.latest_bounding_box = update_queue_item.input_queue.get(timeout=SENDER_QUEUE_TIMEOUT)
+                    update_queue_item.latest_frame = update_queue_item.latest_bounding_box.frame_number
+                except queue.Empty:
+                    logger.debug("could not fetch frame from consumer output - skipped")
 
             max_frame_number: int = self.get_current_max_frame_number()
             for update_queue_item in self.update_queue_items:
-                while not update_queue_item.latest_frame == max_frame_number:
-                    update_queue_item.latest_bounding_box = update_queue_item.input_queue.get()
-                    update_queue_item.latest_frame = update_queue_item.latest_bounding_box.frame_number
-                bounding_boxes.append(update_queue_item.latest_bounding_box)
+                skipped_queue = False
+                while not update_queue_item.latest_frame == max_frame_number and not skipped_queue:
+                    try:
+                        update_queue_item.latest_bounding_box = update_queue_item.input_queue.get(timeout=SENDER_QUEUE_TIMEOUT)
+                        update_queue_item.latest_frame = update_queue_item.latest_bounding_box.frame_number
+                    except queue.Full:
+                        skipped_queue = True
+                        logger.debug("could not fetch frame from consumer output - skipped")
+                if not skipped_queue:
+                    bounding_boxes.append(update_queue_item.latest_bounding_box)
 
-            for index, bounding_box in enumerate(bounding_boxes):
-                logger.debug(f"Sending bounding box {bounding_box.frame_number} from queue {index}")
+            self.print_bounding_boxes(bounding_boxes)
 
-            update_tracking_event: UpdateTrackingEvent = UpdateTrackingEvent(event_type=EventType.UPDATE_TRACKING,
-                                                                             bounding_boxes=bounding_boxes,
-                                                                             frame_number=max_frame_number)
+
+
             # todo: might throw an exception if the session is closed, but this thread is still running
-            await self.websocket.send_json(update_tracking_event.model_dump_json())
-            logger.debug(f"UpdateTrackingEvent sent for frame {update_tracking_event.frame_number}")
+            if len(bounding_boxes) > 0:
+                update_tracking_event: UpdateTrackingEvent = UpdateTrackingEvent(event_type=EventType.UPDATE_TRACKING,
+                                                                                 bounding_boxes=bounding_boxes,
+                                                                                 frame_number=max_frame_number)
+                await self.websocket.send_json(update_tracking_event.model_dump_json())
+               # logger.debug(f"UpdateTrackingEvent sent for frame {update_tracking_event.frame_number}")

@@ -1,6 +1,7 @@
 import logging
 import queue
 import threading
+import time
 
 import cv2
 
@@ -31,6 +32,8 @@ class VideoFrameProducerThread:
             return
         self.video_source: str = video_source
         self.video_capture: cv2.VideoCapture = cv2.VideoCapture(self.video_source)
+        self.fps = self.video_capture.get(cv2.CAP_PROP_FPS)
+        print("--- fps is " + str(self.fps) )
 
     def start(self):
         self.thread.start()
@@ -56,15 +59,27 @@ class VideoFrameProducerThread:
 
     def read_video_frames(self):
         frame_number: int = 0
-        try:
-            while not self.has_quit():
-                success, img = self.video_capture.read()
-                if not success:
-                    self.should_quit.set()
-                frame_number += 1
-                # this blocks until the queue has a free slot
-                for output_queue in self.queues:
-                    output_queue.put(VideoFrame(frame_number=frame_number, img=img))
-                logger.debug(f"Frame {frame_number} read")
-        finally:
-            self.video_capture.release()
+        time_per_frame = 1.0 / self.fps
+
+        while not self.has_quit():
+            time_start = time.time()
+            success, img = self.video_capture.read()
+            if not success:
+                self.should_quit.set()
+            frame_number += 1
+
+            # this blocks until the queue has a free slot
+            for output_queue in self.queues:
+                try:
+                    output_queue.put(VideoFrame(frame_number=frame_number, img=img),timeout=time_per_frame)
+                except queue.Full:
+                    logger.debug("Queue is blocked, skipping frame " + str(frame_number))
+            logger.debug(f"Frame {frame_number} read")
+
+            print("Queue size: " + str(len(self.queues)))
+
+            if(len(self.queues) == 0):
+                print("sleeping for " + str(time_per_frame))
+                time.sleep(time_per_frame)
+           # finally:
+             #   self.video_capture.release()

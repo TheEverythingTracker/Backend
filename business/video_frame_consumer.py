@@ -5,7 +5,7 @@ from collections.abc import Sequence
 
 import cv2
 
-from config.constants import LOG_LEVEL, LOG_FORMAT, QUEUE_SIZE
+from config.constants import LOG_LEVEL, LOG_FORMAT, QUEUE_SIZE,  CONSUMER_QUEUE_TIMEOUT
 from models.dto import BoundingBox, VideoFrame
 from models.errors import TrackingError
 
@@ -37,7 +37,7 @@ class VideoFrameConsumerThread:
     def start(self, initial_bounding_box: BoundingBox):
         logger.debug(
             f"Starting video frame consumer thread for {initial_bounding_box.id} on frame {initial_bounding_box.frame_number}")
-        frame: VideoFrame = self.input_queue.get()
+        frame: VideoFrame = self.input_queue.get(timeout=CONSUMER_QUEUE_TIMEOUT)
         bounding_box_coordinates: tuple = (
             initial_bounding_box.x, initial_bounding_box.y, initial_bounding_box.width, initial_bounding_box.height)
         self.tracker.init(frame.img, bounding_box_coordinates)
@@ -68,9 +68,12 @@ class VideoFrameConsumerThread:
         while not self.has_quit():
             frame = self.input_queue.get()
             bounding_box: Sequence[int] = self.update_tracking(frame.img)
-            self.output_queue.put(
-                BoundingBox(id=self.object_id, frame_number=frame.frame_number, x=bounding_box[0], y=bounding_box[1],
-                            width=bounding_box[2], height=bounding_box[3]))
+            try:
+                self.output_queue.put(
+                    BoundingBox(id=self.object_id, frame_number=frame.frame_number, x=bounding_box[0], y=bounding_box[1],
+                                width=bounding_box[2], height=bounding_box[3]), timeout=CONSUMER_QUEUE_TIMEOUT)
+            except queue.Full:
+                logger.info("Consumer could not put BoundingBox in output_queue")
             logger.debug(f"Tracker {self.object_id} processed frame {frame.frame_number}")
 
 # Frames droppen um den neuen wieder zu bekommen
