@@ -60,7 +60,7 @@ class VideoFrameProducerThread:
 
     def read_video_frames(self):
         frame_number: int = 0
-        time_per_frame = 1.0 / self.fps - 0.005 # give backend 5ms more time per frame
+        time_per_frame = 1.0 / self.fps - 0.004 # give backend 3ms more time per frame
 
         while not self.has_quit():
             time_start = time.time()
@@ -77,7 +77,11 @@ class VideoFrameProducerThread:
             print("Queue size: " + str(len(self.queues)))
 
             time_end = time.time()
-            time_to_wait = time_per_frame - (time_end - time_start)
+            if len(self.queues):
+                time_to_wait = time_per_frame - (time_end - time_start)
+            else:
+                time_to_wait = time_per_frame - 0.053
+
             if(time_to_wait > 0 ):
                 time.sleep(time_to_wait)
            # finally:

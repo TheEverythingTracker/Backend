@@ -1,6 +1,7 @@
 import logging
 import queue
 import threading
+import time
 from collections import deque
 from collections.abc import Sequence
 
@@ -69,15 +70,19 @@ class VideoFrameConsumerThread:
         Run the tracking loop and fill the output_queue with tracking data
         """
         while not self.has_quit():
-            frame = self.input_queue.popleft()
-            bounding_box: Sequence[int] = self.update_tracking(frame.img)
             try:
-                self.output_queue.put(
-                    BoundingBox(id=self.object_id, frame_number=frame.frame_number, x=bounding_box[0], y=bounding_box[1],
-                                width=bounding_box[2], height=bounding_box[3]), timeout=CONSUMER_QUEUE_TIMEOUT)
-            except queue.Full:
-                logger.info("Consumer could not put BoundingBox in output_queue")
-            logger.debug(f"Tracker {self.object_id} processed frame {frame.frame_number}")
+                frame = self.input_queue.popleft()
+                bounding_box: Sequence[int] = self.update_tracking(frame.img)
+                try:
+                    self.output_queue.put(
+                        BoundingBox(id=self.object_id, frame_number=frame.frame_number, x=bounding_box[0], y=bounding_box[1],
+                                    width=bounding_box[2], height=bounding_box[3]), timeout=CONSUMER_QUEUE_TIMEOUT)
+                    logger.debug(f"Tracker {self.object_id} processed frame {frame.frame_number}")
+                except queue.Full:
+                    logger.warning(f"Consumer could not put boundingBox(object_id: {self.object_id}, "
+                                   f"frame: {frame.frame_number}) in output_queue")
+            except IndexError:
+                logger.debug("Consumer Could not fetch frame from input queue")
 
 # Frames droppen um den neuen wieder zu bekommen
 # numdropped = 0

@@ -6,4 +6,4 @@ LOG_FORMAT = '%(levelname)s [%(name)s]:     %(message)s'
 VIDEO_SOURCE = '.resources/race_car.mp4'
 QUEUE_SIZE = 4
 CONSUMER_QUEUE_TIMEOUT = 1
-SENDER_QUEUE_TIMEOUT = 4
+SENDER_QUEUE_TIMEOUT = 0.04

@@ -105,10 +105,10 @@ class TrackingUpdateSenderThread:
                     try:
                         update_queue_item.latest_bounding_box = update_queue_item.input_queue.get(timeout=SENDER_QUEUE_TIMEOUT)
                         update_queue_item.latest_frame = update_queue_item.latest_bounding_box.frame_number
-                    except queue.Full:
+                    except queue.Empty:
                         skipped_queue = True
                         logger.debug("could not fetch frame from consumer output - skipped")
-                if not skipped_queue:
+                if not skipped_queue and update_queue_item.latest_bounding_box is not None:
                     bounding_boxes.append(update_queue_item.latest_bounding_box)
 
             self.print_bounding_boxes(bounding_boxes)
@@ -116,7 +116,7 @@ class TrackingUpdateSenderThread:
 
 
             # todo: might throw an exception if the session is closed, but this thread is still running
-            if len(bounding_boxes) > 0:
+            if bounding_boxes is not None and len(bounding_boxes) > 0:
                 update_tracking_event: UpdateTrackingEvent = UpdateTrackingEvent(event_type=EventType.UPDATE_TRACKING,
                                                                                  bounding_boxes=bounding_boxes,
                                                                                  frame_number=max_frame_number)
