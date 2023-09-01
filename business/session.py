@@ -57,27 +57,17 @@ class Session:
 
     def delete_bounding_box(self, event: dto.DeleteBoundingBoxesEvent):
         for object_id in event.ids:
-            for consumer in self.video_frame_consumers:
-                if object_id is consumer.object_id:
-                    consumer.quit()
-                    print("############# Consummer quitted successfull")
-                    self.video_frame_producer.remove_queue(consumer.input_queue)
-                    del consumer.input_queue
-                    print("#############  Removed Queue from frame_producer successfully")
-                    self.tracking_update_sender.remove_queue(consumer.output_queue)
-                    del consumer.output_queue
-                    print("############# Removed Queue from senderr successfully")
-                    self.video_frame_consumers.remove(consumer)
-                    print("############# Removed frame_consumer from session successfully")
-
-        print("#############Deleting successfull")
+            consumer = self.video_frame_consumers[object_id]
+            consumer.quit()
+            self.video_frame_producer.remove_queue(consumer.input_queue)
+            self.tracking_update_sender.remove_queue(consumer.output_queue)
+            self.video_frame_consumers.remove(consumer)
         return dto.SuccessEvent(event_type=EventType.SUCCESS, request_id=event.request_id, message="OK.")
 
     async def consume_websocket_events(self):
         try:
             logger.info(f"Session '{self.session_id}' started consuming events")
             while True:
-                print("#######Starting new listening cylce")
                 message = await self.websocket.receive_json()
                 logger.debug(f"Session '{self.session_id}' received: {message}")
                 answer = await self.__handle_event(message)
@@ -98,5 +88,5 @@ class Session:
             answer = self.delete_bounding_box(dto.DeleteBoundingBoxesEvent.model_validate(message))
         else:
             raise ValueError(f"Unknown event type '{message['event_type']}'")
-        logger.debug(f"-------------------- Session '{self.session_id}' handled {message['event_type']}")
+        logger.debug(f"Session '{self.session_id}' handled {message['event_type']}")
         return answer
