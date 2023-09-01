@@ -2,6 +2,7 @@ import logging
 import queue
 import threading
 import time
+from collections import deque
 
 import cv2
 
@@ -19,7 +20,7 @@ class VideoFrameProducerThread:
     video_capture: cv2.VideoCapture
     should_quit: threading.Event
     thread: threading.Thread
-    queues: list[queue.Queue[VideoFrame]]
+    queues: list[deque[VideoFrame]]
 
     def __init__(self):
         self.should_quit = threading.Event()
@@ -41,10 +42,10 @@ class VideoFrameProducerThread:
     def is_running(self):
         return self.thread.is_alive()
 
-    def add_queue(self, output_queue: queue.Queue[VideoFrame]):
+    def add_queue(self, output_queue: deque[VideoFrame]):
         self.queues.append(output_queue)
 
-    def remove_queue(self, queue_to_remove: queue.Queue[VideoFrame]):
+    def remove_queue(self, queue_to_remove: deque[VideoFrame]):
         self.queues.remove(queue_to_remove)
 
     def quit(self):
@@ -59,7 +60,7 @@ class VideoFrameProducerThread:
 
     def read_video_frames(self):
         frame_number: int = 0
-        time_per_frame = 1.0 / self.fps
+        time_per_frame = 1.0 / self.fps - 0.005 # give backend 5ms more time per frame
 
         while not self.has_quit():
             time_start = time.time()
@@ -70,16 +71,14 @@ class VideoFrameProducerThread:
 
             # this blocks until the queue has a free slot
             for output_queue in self.queues:
-                try:
-                    output_queue.put(VideoFrame(frame_number=frame_number, img=img),timeout=time_per_frame)
-                except queue.Full:
-                    logger.debug("Queue is blocked, skipping frame " + str(frame_number))
+                output_queue.append(VideoFrame(frame_number=frame_number, img=img))
             logger.debug(f"Frame {frame_number} read")
 
             print("Queue size: " + str(len(self.queues)))
 
-            if(len(self.queues) == 0):
-                print("sleeping for " + str(time_per_frame))
-                time.sleep(time_per_frame)
+            time_end = time.time()
+            time_to_wait = time_per_frame - (time_end - time_start)
+            if(time_to_wait > 0 ):
+                time.sleep(time_to_wait)
            # finally:
              #   self.video_capture.release()

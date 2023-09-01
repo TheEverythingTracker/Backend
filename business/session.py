@@ -62,8 +62,10 @@ class Session:
                     consumer.quit()
                     print("############# Consummer quitted successfull")
                     self.video_frame_producer.remove_queue(consumer.input_queue)
+                    del consumer.input_queue
                     print("#############  Removed Queue from frame_producer successfully")
                     self.tracking_update_sender.remove_queue(consumer.output_queue)
+                    del consumer.output_queue
                     print("############# Removed Queue from senderr successfully")
                     self.video_frame_consumers.remove(consumer)
                     print("############# Removed frame_consumer from session successfully")
@@ -96,5 +98,5 @@ class Session:
             answer = self.delete_bounding_box(dto.DeleteBoundingBoxesEvent.model_validate(message))
         else:
             raise ValueError(f"Unknown event type '{message['event_type']}'")
-        logger.debug(f"Session '{self.session_id}' handled {message['event_type']}")
+        logger.debug(f"-------------------- Session '{self.session_id}' handled {message['event_type']}")
         return answer

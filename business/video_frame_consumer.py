@@ -1,6 +1,7 @@
 import logging
 import queue
 import threading
+from collections import deque
 from collections.abc import Sequence
 
 import cv2
@@ -17,7 +18,7 @@ logger.setLevel(LOG_LEVEL)
 class VideoFrameConsumerThread:
     tracker: cv2.Tracker
     object_id: int
-    input_queue: queue.Queue[VideoFrame]
+    input_queue: deque[VideoFrame]
     output_queue: queue.Queue[BoundingBox]
     thread: threading.Thread
     should_quit: threading.Event
@@ -29,7 +30,7 @@ class VideoFrameConsumerThread:
         """
         self.tracker = cv2.TrackerMIL.create()
         self.object_id = object_id
-        self.input_queue = queue.Queue(QUEUE_SIZE)
+        self.input_queue = deque(maxlen=QUEUE_SIZE)
         self.output_queue = queue.Queue(QUEUE_SIZE)
         self.thread: threading.Thread = threading.Thread(target=self.run_tracking_loop)
         self.should_quit = threading.Event()
@@ -37,7 +38,9 @@ class VideoFrameConsumerThread:
     def start(self, initial_bounding_box: BoundingBox):
         logger.debug(
             f"Starting video frame consumer thread for {initial_bounding_box.id} on frame {initial_bounding_box.frame_number}")
-        frame: VideoFrame = self.input_queue.get(timeout=CONSUMER_QUEUE_TIMEOUT)
+        while len(self.input_queue) == 0:
+            print("Busy waiting")
+        frame: VideoFrame = self.input_queue.popleft()
         bounding_box_coordinates: tuple = (
             initial_bounding_box.x, initial_bounding_box.y, initial_bounding_box.width, initial_bounding_box.height)
         self.tracker.init(frame.img, bounding_box_coordinates)
@@ -66,7 +69,7 @@ class VideoFrameConsumerThread:
         Run the tracking loop and fill the output_queue with tracking data
         """
         while not self.has_quit():
-            frame = self.input_queue.get()
+            frame = self.input_queue.popleft()
             bounding_box: Sequence[int] = self.update_tracking(frame.img)
             try:
                 self.output_queue.put(
