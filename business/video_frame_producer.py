@@ -4,7 +4,7 @@ import threading
 
 import cv2
 
-from config.constants import LOG_FORMAT, LOG_LEVEL, QUEUE_SIZE
+from config.constants import LOG_FORMAT, LOG_LEVEL
 from models.dto import VideoFrame
 
 logging.basicConfig(format=LOG_FORMAT)
@@ -23,6 +23,7 @@ class VideoFrameProducerThread:
     def __init__(self):
         self.should_quit = threading.Event()
         self.thread = threading.Thread(target=self.read_video_frames)
+        self.thread.daemon = True
         self.queues = []
 
     def load(self, video_source: str):
@@ -46,16 +47,14 @@ class VideoFrameProducerThread:
 
     def quit(self):
         self.should_quit.set()
-        # only join if the thread has been started
-        if self.thread.ident is not None:
-            self.thread.join()
-        logger.debug(f"Video frame producer thread exited")
+        logger.debug(f"Video frame producer thread exiting")
 
     def has_quit(self):
         return self.should_quit.is_set()
 
     def read_video_frames(self):
         frame_number: int = 0
+        fps = self.video_capture.get(cv2.CAP_PROP_FPS)
         try:
             while not self.has_quit():
                 success, img = self.video_capture.read()
@@ -63,8 +62,14 @@ class VideoFrameProducerThread:
                     self.should_quit.set()
                 frame_number += 1
                 # this blocks until the queue has a free slot
-                for output_queue in self.queues:
-                    output_queue.put(VideoFrame(frame_number=frame_number, img=img))
-                logger.debug(f"Frame {frame_number} read")
+                if self.queues:
+                    for output_queue in self.queues:
+                        output_queue.put(VideoFrame(frame_number=frame_number, img=img))
+                        logger.debug(f"Frame {frame_number} read")
+
+                else:
+                    threading.Event().wait(1 / fps)
+                    logger.debug(f"No consumers: Frame {frame_number} ignored")
         finally:
             self.video_capture.release()
+            logger.debug(f"Video frame producer thread exited")

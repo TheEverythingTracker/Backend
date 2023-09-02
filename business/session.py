@@ -1,5 +1,4 @@
 import logging
-import queue
 from uuid import UUID
 
 from fastapi import WebSocket
@@ -20,21 +19,21 @@ class Session:
     session_id: UUID
     websocket: WebSocket
     video_frame_producer: VideoFrameProducerThread
-    video_frame_consumers: list[VideoFrameConsumerThread]
+    video_frame_consumers: dict[int, VideoFrameConsumerThread]
     tracking_update_sender: TrackingUpdateSenderThread
 
     def __init__(self, session_id: UUID, websocket: WebSocket):
         self.session_id = session_id
         self.websocket = websocket
         self.video_frame_producer = VideoFrameProducerThread()
-        self.video_frame_consumers = []
+        self.video_frame_consumers = {}
         self.tracking_update_sender = TrackingUpdateSenderThread(self.websocket)
         logger.debug(f"Session '{session_id}' created")
 
     def __del__(self):
         logger.debug(f"Destroying Session '{self.session_id}'")
         self.video_frame_producer.quit()
-        for consumer in self.video_frame_consumers:
+        for consumer in self.video_frame_consumers.values():
             consumer.quit()
         self.tracking_update_sender.quit()
         logger.debug(f"Session '{self.session_id}' destroyed")
@@ -44,7 +43,7 @@ class Session:
         return dto.SuccessEvent(event_type=EventType.SUCCESS, request_id=event.request_id, message="OK.")
 
     def add_bounding_box(self, event: dto.AddBoundingBoxEvent):
-        video_frame_consumer = VideoFrameConsumerThread(event.bounding_box.id)
+        video_frame_consumer = VideoFrameConsumerThread(event.bounding_box.id, self.on_video_frame_consumer_error)
         self.video_frame_producer.add_queue(video_frame_consumer.input_queue)
         if not self.video_frame_producer.is_running():
             self.video_frame_producer.start()
@@ -52,18 +51,20 @@ class Session:
         self.tracking_update_sender.add_queue(video_frame_consumer.output_queue)
         if not self.tracking_update_sender.is_running():
             self.tracking_update_sender.start()
-        self.video_frame_consumers.append(video_frame_consumer)
+        self.video_frame_consumers[video_frame_consumer.object_id] = video_frame_consumer
         return dto.SuccessEvent(event_type=EventType.SUCCESS, request_id=event.request_id, message="OK.")
 
-    def delete_bounding_box(self, event: dto.DeleteBoundingBoxesEvent):
+    def delete_bounding_boxes(self, event: dto.DeleteBoundingBoxesEvent):
         for object_id in event.ids:
-            for consumer in self.video_frame_consumers:
-                if object_id is consumer.object_id:
-                    self.video_frame_producer.remove_queue(consumer.input_queue)
-                    consumer.quit()
-                    self.tracking_update_sender.remove_queue(consumer.output_queue)
-                    self.video_frame_consumers.remove(consumer)
+            self.delete_bounding_box(object_id)
         return dto.SuccessEvent(event_type=EventType.SUCCESS, request_id=event.request_id, message="OK.")
+
+    def delete_bounding_box(self, object_id):
+        consumer = self.video_frame_consumers[object_id]
+        self.video_frame_producer.remove_queue(consumer.input_queue)
+        self.tracking_update_sender.remove_queue(consumer.output_queue)
+        consumer.quit()
+        self.video_frame_consumers.pop(object_id)
 
     async def consume_websocket_events(self):
         try:
@@ -86,8 +87,12 @@ class Session:
         elif message['event_type'] == dto.EventType.ADD_BOUNDING_BOX:
             answer = self.add_bounding_box(dto.AddBoundingBoxEvent.model_validate(message))
         elif message['event_type'] == dto.EventType.DELETE_BOUNDING_BOX:
-            answer = self.delete_bounding_box(dto.DeleteBoundingBoxesEvent.model_validate(message))
+            answer = self.delete_bounding_boxes(dto.DeleteBoundingBoxesEvent.model_validate(message))
         else:
             raise ValueError(f"Unknown event type '{message['event_type']}'")
         logger.debug(f"Session '{self.session_id}' handled {message['event_type']}")
         return answer
+
+    def on_video_frame_consumer_error(self, event: dto.ThreadingEvent):
+        logger.error(event.message)
+        self.delete_bounding_box(event.source_id)

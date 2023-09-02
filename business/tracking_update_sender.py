@@ -36,6 +36,7 @@ class TrackingUpdateSenderThread:
         self.update_queue_items = []
         self.should_quit = threading.Event()
         self.thread = threading.Thread(target=self.run_in_async_loop)
+        self.thread.daemon = True
 
     def start(self):
         logger.debug(f"Starting tracking update sender thread")
@@ -55,10 +56,7 @@ class TrackingUpdateSenderThread:
 
     def quit(self):
         self.should_quit.set()
-        # only join if the thread has been started
-        if self.thread.ident is not None:
-            self.thread.join()
-        logger.debug(f"Tracking update sender thread exited")
+        logger.debug(f"Tracking update sender thread exiting")
 
     def has_quit(self):
         return self.should_quit.is_set()
@@ -102,3 +100,4 @@ class TrackingUpdateSenderThread:
             # todo: might throw an exception if the session is closed, but this thread is still running
             await self.websocket.send_json(update_tracking_event.model_dump_json())
             logger.debug(f"UpdateTrackingEvent sent for frame {update_tracking_event.frame_number}")
+        logger.debug(f"Tracking update sender thread exited")
