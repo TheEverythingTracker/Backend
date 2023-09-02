@@ -27,7 +27,7 @@ class VideoFrameConsumerThread:
         initialize object tracker by object selection in first frame
         :return: created tracker instance
         """
-        self.tracker = cv2.TrackerMIL.create()
+        self.tracker = cv2.TrackerCSRT.create()
         self.object_id = object_id
         self.input_queue = queue.Queue(QUEUE_SIZE)
         self.output_queue = queue.Queue(QUEUE_SIZE)
