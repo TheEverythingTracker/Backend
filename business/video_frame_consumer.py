@@ -72,6 +72,15 @@ class VideoFrameConsumerThread:
                 BoundingBox(id=self.object_id, frame_number=frame.frame_number, x=bounding_box[0], y=bounding_box[1],
                             width=bounding_box[2], height=bounding_box[3]))
             logger.debug(f"Tracker {self.object_id} processed frame {frame.frame_number}")
+        queue_is_empty = False
+        while not queue_is_empty:
+            try:
+                self.input_queue.get(timeout=0.3)
+            except queue.Empty:
+                queue_is_empty = True
+
+
+
 
 # Frames droppen um den neuen wieder zu bekommen
 # numdropped = 0
