@@ -72,9 +72,9 @@ class FailureEvent(AnswerEvent):
 
 
 class ThreadingEvent:
-    source_id: int
+    source: int | str
     message: str
 
-    def __init__(self, source_id: int, message: str):
-        self.source_id = source_id
+    def __init__(self, source: int | str, message: str):
+        self.source = source
         self.message = message

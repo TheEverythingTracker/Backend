@@ -25,7 +25,7 @@ class Session:
     def __init__(self, session_id: UUID, websocket: WebSocket):
         self.session_id = session_id
         self.websocket = websocket
-        self.video_frame_producer = VideoFrameProducerThread()
+        self.video_frame_producer = VideoFrameProducerThread(self.on_video_frame_producer_quits)
         self.video_frame_consumers = {}
         self.tracking_update_sender = TrackingUpdateSenderThread(self.websocket)
         logger.debug(f"Session '{session_id}' created")
@@ -65,6 +65,7 @@ class Session:
         self.tracking_update_sender.remove_queue(consumer.output_queue)
         consumer.quit()
         self.video_frame_consumers.pop(object_id)
+        # TODO: Send Error event: Bounding Box deleted or make the frontend forget the box if there is no update for a while?
 
     async def consume_websocket_events(self):
         try:
@@ -80,7 +81,7 @@ class Session:
             logger.info(f"Session '{self.session_id}' stopped consuming events")
             raise e
 
-    async def __handle_event(self, message: dict):  # todo: mit Frontend abstimmen, wie die JSON-Formate aussehen sollen
+    async def __handle_event(self, message: dict):
         answer: dto.AnswerEvent
         if message['event_type'] == dto.EventType.START_CONTROL_LOOP:
             answer = self.start_control_loop(dto.StartControlLoopEvent.model_validate(message))
@@ -93,6 +94,12 @@ class Session:
         logger.debug(f"Session '{self.session_id}' handled {message['event_type']}")
         return answer
 
+    # callbacks vermischen den Ausführungskontext zwischen den Threads
     def on_video_frame_consumer_error(self, event: dto.ThreadingEvent):
         logger.error(event.message)
-        self.delete_bounding_box(event.source_id)
+        self.delete_bounding_box(event.source)
+
+    def on_video_frame_producer_quits(self, event: dto.ThreadingEvent):
+        message = f"Session '{self.session_id}': {event.message}"
+        logger.critical(f"-----------> TODO: {message}")
+        # todo: Session neu anlegen, ohne die Websocket-Verbindung zu trennen?

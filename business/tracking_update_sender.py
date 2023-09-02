@@ -76,6 +76,7 @@ class TrackingUpdateSenderThread:
         return max_frame_number
 
     async def send_updates(self):
+        # todo: Bug: es werden extrem schnell leere Events versendet, wenn kein Tracker läuft
         while not self.has_quit():
             bounding_boxes: list[BoundingBox] = []
 
