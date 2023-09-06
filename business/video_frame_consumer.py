@@ -36,8 +36,9 @@ class VideoFrameConsumerThread:
 
     def start(self, initial_bounding_box: BoundingBox):
         logger.debug(
-            f"Starting video frame consumer thread for {initial_bounding_box.id} on frame {initial_bounding_box.frame_number}")
+            f"Starting video frame consumer thread for {initial_bounding_box.id} on frame (from Frontend) {initial_bounding_box.frame_number}")
         frame: VideoFrame = self.input_queue.get()
+        logger.debug(f"Initial frame (from Backend) {frame.frame_number}")
         bounding_box_coordinates: tuple = (
             initial_bounding_box.x, initial_bounding_box.y, initial_bounding_box.width, initial_bounding_box.height)
         self.tracker.init(frame.img, bounding_box_coordinates)
@@ -71,7 +72,7 @@ class VideoFrameConsumerThread:
             self.output_queue.put(
                 BoundingBox(id=self.object_id, frame_number=frame.frame_number, x=bounding_box[0], y=bounding_box[1],
                             width=bounding_box[2], height=bounding_box[3]))
-            logger.debug(f"Tracker {self.object_id} processed frame {frame.frame_number}")
+            # logger.debug(f"Tracker {self.object_id} processed frame {frame.frame_number}")
 
 # Frames droppen um den neuen wieder zu bekommen
 # numdropped = 0

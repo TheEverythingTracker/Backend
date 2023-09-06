@@ -66,6 +66,6 @@ class VideoFrameProducerThread:
                 for output_queue in self.queues:
                     # if frame_number % 3 != 0:
                     output_queue.put(VideoFrame(frame_number=frame_number, img=img))
-                logger.debug(f"Frame {frame_number} read")
+                # logger.debug(f"Frame {frame_number} read")
         finally:
             self.video_capture.release()
