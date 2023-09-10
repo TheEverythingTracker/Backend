@@ -43,7 +43,6 @@ class BoundingBox(BaseModel):
 
 
 class AddBoundingBoxEvent(IdEvent):
-    frame_number: int
     bounding_box: BoundingBox
 
 
