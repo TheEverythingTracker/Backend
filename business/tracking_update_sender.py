@@ -76,29 +76,30 @@ class TrackingUpdateSenderThread:
         return max_frame_number
 
     async def send_updates(self):
-        # todo: Bug: es werden extrem schnell leere Events versendet, wenn kein Tracker läuft
         while not self.has_quit():
-            bounding_boxes: list[BoundingBox] = []
+            if len(self.update_queue_items) != 0:
+                print(len(self.update_queue_items))
+                bounding_boxes: list[BoundingBox] = []
 
-            for index, update_queue_item in enumerate(self.update_queue_items):
-                # here the update sender stops trackers from tracking
-                update_queue_item.latest_bounding_box = update_queue_item.input_queue.get()
-                update_queue_item.latest_frame = update_queue_item.latest_bounding_box.frame_number
-
-            max_frame_number: int = self.get_current_max_frame_number()
-            for update_queue_item in self.update_queue_items:
-                while not update_queue_item.latest_frame == max_frame_number:
+                for index, update_queue_item in enumerate(self.update_queue_items):
+                    # here the update sender stops trackers from tracking
                     update_queue_item.latest_bounding_box = update_queue_item.input_queue.get()
                     update_queue_item.latest_frame = update_queue_item.latest_bounding_box.frame_number
-                bounding_boxes.append(update_queue_item.latest_bounding_box)
 
-            for index, bounding_box in enumerate(bounding_boxes):
-                logger.debug(f"Sending bounding box {bounding_box.frame_number} from queue {index}")
+                max_frame_number: int = self.get_current_max_frame_number()
+                for update_queue_item in self.update_queue_items:
+                    while not update_queue_item.latest_frame == max_frame_number:
+                        update_queue_item.latest_bounding_box = update_queue_item.input_queue.get()
+                        update_queue_item.latest_frame = update_queue_item.latest_bounding_box.frame_number
+                    bounding_boxes.append(update_queue_item.latest_bounding_box)
 
-            update_tracking_event: UpdateTrackingEvent = UpdateTrackingEvent(event_type=EventType.UPDATE_TRACKING,
-                                                                             bounding_boxes=bounding_boxes,
-                                                                             frame_number=max_frame_number)
-            # todo: might throw an exception if the session is closed, but this thread is still running
-            await self.websocket.send_json(update_tracking_event.model_dump_json())
-            logger.debug(f"UpdateTrackingEvent sent for frame {update_tracking_event.frame_number}")
+                for index, bounding_box in enumerate(bounding_boxes):
+                    logger.debug(f"Sending bounding box {bounding_box.frame_number} from queue {index}")
+
+                update_tracking_event: UpdateTrackingEvent = UpdateTrackingEvent(event_type=EventType.UPDATE_TRACKING,
+                                                                                 bounding_boxes=bounding_boxes,
+                                                                                 frame_number=max_frame_number)
+                # todo: might throw an exception if the session is closed, but this thread is still running
+                await self.websocket.send_json(update_tracking_event.model_dump_json())
+                logger.debug(f"UpdateTrackingEvent sent for frame {update_tracking_event.frame_number}")
         logger.debug(f"Tracking update sender thread exited")
