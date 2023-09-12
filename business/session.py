@@ -30,7 +30,7 @@ class Session:
         self.tracking_update_sender = TrackingUpdateSenderThread(self.websocket)
         logger.debug(f"Session '{session_id}' created")
 
-    def __del__(self):
+    def cleanup_session(self):
         logger.debug(f"Destroying Session '{self.session_id}'")
         self.video_frame_producer.quit()
         for consumer in self.video_frame_consumers.values():
