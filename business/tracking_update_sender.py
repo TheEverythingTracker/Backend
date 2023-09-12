@@ -98,7 +98,9 @@ class TrackingUpdateSenderThread:
                 update_tracking_event: UpdateTrackingEvent = UpdateTrackingEvent(event_type=EventType.UPDATE_TRACKING,
                                                                                  bounding_boxes=bounding_boxes,
                                                                                  frame_number=max_frame_number)
-                # todo: might throw an exception if the session is closed, but this thread is still running
-                await self.websocket.send_json(update_tracking_event.model_dump_json())
+                try:
+                    await self.websocket.send_json(update_tracking_event.model_dump_json())
+                except RuntimeError as e:
+                    print(e)
                 logger.debug(f"UpdateTrackingEvent sent for frame {update_tracking_event.frame_number}")
         logger.debug(f"Tracking update sender thread exited")
