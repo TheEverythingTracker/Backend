@@ -60,12 +60,13 @@ class Session:
         return dto.SuccessEvent(event_type=EventType.SUCCESS, request_id=event.request_id, message="OK.")
 
     def delete_bounding_box(self, object_id):
-        consumer = self.video_frame_consumers[object_id]
-        self.video_frame_producer.remove_queue(consumer.input_queue)
-        self.tracking_update_sender.remove_queue(consumer.output_queue)
-        consumer.quit()
-        self.video_frame_consumers.pop(object_id)
-        # TODO: Send Error event: Bounding Box deleted or make the frontend forget the box if there is no update for a while?
+        if object_id in self.video_frame_consumers:
+            consumer = self.video_frame_consumers[object_id]
+            self.video_frame_producer.remove_queue(consumer.input_queue)
+            self.tracking_update_sender.remove_queue(consumer.output_queue)
+            consumer.quit()
+            self.video_frame_consumers.pop(object_id)
+            # TODO: Send Error event: Bounding Box deleted or make the frontend forget the box if there is no update for a while?
 
     async def consume_websocket_events(self):
         try:
