@@ -78,7 +78,6 @@ class TrackingUpdateSenderThread:
     async def send_updates(self):
         while not self.has_quit():
             if len(self.update_queue_items) != 0:
-                print(len(self.update_queue_items))
                 bounding_boxes: list[BoundingBox] = []
 
                 for index, update_queue_item in enumerate(self.update_queue_items):
