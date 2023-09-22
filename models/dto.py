@@ -2,7 +2,6 @@ from enum import Enum
 from typing import List, Any, Optional
 from uuid import UUID
 
-import numpy as np
 from pydantic import BaseModel
 
 
@@ -70,3 +69,12 @@ class SuccessEvent(AnswerEvent):
 
 class FailureEvent(AnswerEvent):
     pass
+
+
+class ThreadingEvent:
+    source: int | str
+    message: str
+
+    def __init__(self, source: int | str, message: str):
+        self.source = source
+        self.message = message

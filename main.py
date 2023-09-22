@@ -26,16 +26,15 @@ async def connect_websocket(websocket: WebSocket, session_id: UUID):
         await websocket.close(code=WebsocketStatusCode.PROTOCOL_ERROR, reason=str(e))
         logger.info(f"Session '{session_id}' rejected")
         return
-
+    session = Session(session_id, websocket)
     try:
         logger.info(f"Session '{session_id}' opened")
-        session = Session(session_id, websocket)
         await session.consume_websocket_events()
     except WebSocketDisconnect as e:
         logger.warning(f"WebsocketDisconnect with Reason: {e}")
     finally:
         connection_manager.remove_connection(session_id)
-        del session
+        session.cleanup_session()
         logger.info(f"Session '{session_id}' closed")
 
 
