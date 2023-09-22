@@ -1,3 +1,5 @@
+[![Build Docker-Image](https://github.com/TheEverythingTracker/Backend/actions/workflows/docker-publish.yml/badge.svg?branch=main)](https://github.com/TheEverythingTracker/Backend/actions/workflows/docker-publish.yml)
+
 # TheEverytingTracker Backend
 
 FastAPI Backend for playing video and interactively tracking displayed objects.
