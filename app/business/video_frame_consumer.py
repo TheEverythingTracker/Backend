@@ -6,9 +6,9 @@ from typing import Callable
 
 import cv2
 
-from config.constants import LOG_LEVEL, LOG_FORMAT, QUEUE_SIZE, PRODUCER_THREAD_SEEMS_DEAD_TIMEOUT
-from models.dto import BoundingBox, VideoFrame, ThreadingEvent
-from models.errors import TrackingError
+from app.config.constants import LOG_LEVEL, LOG_FORMAT, QUEUE_SIZE, PRODUCER_THREAD_SEEMS_DEAD_TIMEOUT
+from app.models.dto import BoundingBox, VideoFrame, ThreadingEvent
+from app.models.errors import TrackingError
 
 logging.basicConfig(format=LOG_FORMAT)
 logger = logging.getLogger(__name__)
