@@ -3,8 +3,8 @@ from typing import List
 
 import cv2
 
-from app.config.constants import LOG_LEVEL
-from app.models import dto
+from config.constants import LOG_LEVEL
+from models import dto
 
 logger = logging.getLogger(__name__)
 logger.setLevel(LOG_LEVEL)

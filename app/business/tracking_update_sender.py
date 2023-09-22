@@ -5,9 +5,9 @@ import threading
 
 from fastapi import WebSocket
 
-from app.config.constants import LOG_FORMAT, LOG_LEVEL
-from app.models.dto import BoundingBox, UpdateTrackingEvent
-from app.models.dto import EventType
+from config.constants import LOG_FORMAT, LOG_LEVEL
+from models.dto import BoundingBox, UpdateTrackingEvent
+from models.dto import EventType
 
 logging.basicConfig(format=LOG_FORMAT)
 logger = logging.getLogger(__name__)
