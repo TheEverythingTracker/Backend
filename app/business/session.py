@@ -3,12 +3,12 @@ from uuid import UUID
 
 from fastapi import WebSocket
 
-from business.tracking_update_sender import TrackingUpdateSenderThread
-from business.video_frame_consumer import VideoFrameConsumerThread
-from business.video_frame_producer import VideoFrameProducerThread
-from config.constants import LOG_LEVEL, LOG_FORMAT
-from models import dto
-from models.dto import EventType
+from app.business.tracking_update_sender import TrackingUpdateSenderThread
+from app.business.video_frame_consumer import VideoFrameConsumerThread
+from app.business.video_frame_producer import VideoFrameProducerThread
+from app.config.constants import LOG_LEVEL, LOG_FORMAT
+from app.models import dto
+from app.models.dto import EventType
 
 logging.basicConfig(format=LOG_FORMAT)
 logger = logging.getLogger(__name__)

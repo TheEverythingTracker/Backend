@@ -5,8 +5,8 @@ from typing import Callable
 
 import cv2
 
-from config.constants import LOG_FORMAT, LOG_LEVEL
-from models.dto import VideoFrame, ThreadingEvent
+from app.config.constants import LOG_FORMAT, LOG_LEVEL
+from app.models.dto import VideoFrame, ThreadingEvent
 
 logging.basicConfig(format=LOG_FORMAT)
 logger = logging.getLogger(__name__)
