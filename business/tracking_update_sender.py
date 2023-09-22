@@ -101,6 +101,6 @@ class TrackingUpdateSenderThread:
                 try:
                     await self.websocket.send_json(update_tracking_event.model_dump_json())
                 except RuntimeError as e:
-                    print(e)
+                    logger.warning(e)
                 logger.debug(f"UpdateTrackingEvent sent for frame {update_tracking_event.frame_number}")
         logger.debug(f"Tracking update sender thread exited")
