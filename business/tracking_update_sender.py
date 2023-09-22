@@ -36,6 +36,7 @@ class TrackingUpdateSenderThread:
         self.update_queue_items = []
         self.should_quit = threading.Event()
         self.thread = threading.Thread(target=self.run_in_async_loop)
+        self.thread.daemon = True
 
     def start(self):
         logger.debug(f"Starting tracking update sender thread")
@@ -55,10 +56,7 @@ class TrackingUpdateSenderThread:
 
     def quit(self):
         self.should_quit.set()
-        # only join if the thread has been started
-        if self.thread.ident is not None:
-            self.thread.join()
-        logger.debug(f"Tracking update sender thread exited")
+        logger.debug(f"Tracking update sender thread exiting")
 
     def has_quit(self):
         return self.should_quit.is_set()
@@ -79,26 +77,30 @@ class TrackingUpdateSenderThread:
 
     async def send_updates(self):
         while not self.has_quit():
-            bounding_boxes: list[BoundingBox] = []
+            if len(self.update_queue_items) != 0:
+                bounding_boxes: list[BoundingBox] = []
 
-            for index, update_queue_item in enumerate(self.update_queue_items):
-                # here the update sender stops trackers from tracking
-                update_queue_item.latest_bounding_box = update_queue_item.input_queue.get()
-                update_queue_item.latest_frame = update_queue_item.latest_bounding_box.frame_number
-
-            max_frame_number: int = self.get_current_max_frame_number()
-            for update_queue_item in self.update_queue_items:
-                while not update_queue_item.latest_frame == max_frame_number:
+                for index, update_queue_item in enumerate(self.update_queue_items):
+                    # here the update sender stops trackers from tracking
                     update_queue_item.latest_bounding_box = update_queue_item.input_queue.get()
                     update_queue_item.latest_frame = update_queue_item.latest_bounding_box.frame_number
-                bounding_boxes.append(update_queue_item.latest_bounding_box)
 
-            for index, bounding_box in enumerate(bounding_boxes):
-                logger.debug(f"Sending bounding box {bounding_box.frame_number} from queue {index}")
+                max_frame_number: int = self.get_current_max_frame_number()
+                for update_queue_item in self.update_queue_items:
+                    while not update_queue_item.latest_frame == max_frame_number:
+                        update_queue_item.latest_bounding_box = update_queue_item.input_queue.get()
+                        update_queue_item.latest_frame = update_queue_item.latest_bounding_box.frame_number
+                    bounding_boxes.append(update_queue_item.latest_bounding_box)
 
-            update_tracking_event: UpdateTrackingEvent = UpdateTrackingEvent(event_type=EventType.UPDATE_TRACKING,
-                                                                             bounding_boxes=bounding_boxes,
-                                                                             frame_number=max_frame_number)
-            # todo: might throw an exception if the session is closed, but this thread is still running
-            await self.websocket.send_json(update_tracking_event.model_dump_json())
-            logger.debug(f"UpdateTrackingEvent sent for frame {update_tracking_event.frame_number}")
+                for index, bounding_box in enumerate(bounding_boxes):
+                    logger.debug(f"Sending bounding box {bounding_box.frame_number} from queue {index}")
+
+                update_tracking_event: UpdateTrackingEvent = UpdateTrackingEvent(event_type=EventType.UPDATE_TRACKING,
+                                                                                 bounding_boxes=bounding_boxes,
+                                                                                 frame_number=max_frame_number)
+                try:
+                    await self.websocket.send_json(update_tracking_event.model_dump_json())
+                except RuntimeError as e:
+                    logger.warning(e)
+                logger.debug(f"UpdateTrackingEvent sent for frame {update_tracking_event.frame_number}")
+        logger.debug(f"Tracking update sender thread exited")
