@@ -1,5 +1,7 @@
 FROM python:3.11-slim
 
+LABEL org.opencontainers.image.description="TheEverythingTracker/Backend: Reads a video-stream and outputs tracking data for TheEverythingTracker/Frontend."
+
 RUN useradd -u 8877 containeruser
 
 WORKDIR /code
