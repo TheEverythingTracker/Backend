@@ -29,11 +29,9 @@ docker run -p 8000:8000 --name 'TheEverythingTracker_Backend' ghcr.io/theeveryth
 
 [TheEverythingTracker](http://localhost:8080)
 
-### Without Docker:
+### Without Docker (for development):
 
-1. Clone this repository, install the dependencies (maybe use Poetry, see the ["Set up"](#set-up) section in this
-   document) and run ```python ./app/main.py```
-2. Learn how to run the Frontend here: [TheEverytingTracker/Frontend](https://github.com/TheEverythingTracker/Frontend)
+See ["Set up"](#set-up)
 
 ## Technology Overview
 
@@ -58,6 +56,7 @@ This application uses the following core dependencies:
 4. Create a virtual environment and install dependencies into it with ```poetry install``` while in the project
    directory
 5. Run ```python ./app/main.py```
+6. Learn how to set up the Frontend here: [TheEverytingTracker/Frontend](https://github.com/TheEverythingTracker/Frontend)
 
 ### Build a new Docker Image
 
