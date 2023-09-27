@@ -2,45 +2,46 @@
 
 # TheEverytingTracker Backend
 
-FastAPI Backend for playing video and interactively tracking displayed objects.
+Backend for playing video and interactively tracking displayed objects.
 
-## Run
+## How to run
 
-#### Run Frontend:
+#### Run the Frontend Docker-Container:
 
-```
+```shell
 docker run -it -p 8080:80 --name 'TheEverythingTracker_Frontend' ghcr.io/theeverythingtracker/frontend:main
 ```
 
-#### Run Backend:
+#### Run the Backend Docker-Container:
 
-```
+```shell
 docker run -p 8000:8000 --name 'TheEverythingTracker_Backend' ghcr.io/theeverythingtracker/backend:main
 ```
 
-#### Connect to Frontend:
+#### Connect to the Frontend:
 
 [TheEverythingTracker](http://localhost:8080)
 
-## todo: Explain Poetry Basics
+## Technology Overview
 
-[Poetry Docs](https://python-poetry.org/docs/cli/)
+This application uses the following core dependencies:
 
-# Mulitprocessing
+- [FastAPI](https://fastapi.tiangolo.com/) as Framework for managing Websockets
+- [OpenCV](https://opencv.org/) for tracking and video related workloads
+- [uvicorn](https://www.uvicorn.org/) as ASGI web server for serving the application
 
-* 1 main process for management
-    * Managing Websocket
-    * Starting/stopping Processes for object tracking
-    * getting data from worker processes and passing them to the websocket
-* n Worker Processes for object tracking
+## Contributing
 
-## Why Mulitprocessing instead of Multithreading?
+### Set up
 
-Due to the global Interpreter Lock (GIL) in the case of Multithreading there would still only be executed one thread at
-a time
+1. Install Python
+2. This project uses Poetry for dependency-management. If you don't have it already: Set up Python Poetry by following
+   these [Instructions](https://python-poetry.org/docs/).
+3. Clone the project
+4. Create a virtual environment and install dependencies into it with ```poetry install``` while in the project
+   directory
+5. Run ```python ./app/main.py```
 
--> No Performance benefit for tracking
+### Guidelines
 
-## Discuss
-
-* 
+- Every feature should be described in an issue and implemented in a branch linked to that issue
