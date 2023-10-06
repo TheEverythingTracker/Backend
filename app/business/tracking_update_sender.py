@@ -2,10 +2,10 @@ import asyncio
 import logging
 import queue
 import threading
-
+from time import sleep
 from fastapi import WebSocket
 
-from config.constants import LOG_FORMAT, LOG_LEVEL
+from config.constants import LOG_FORMAT, LOG_LEVEL, NO_UPDATES_TO_SEND_TIMEOUT
 from models.dto import BoundingBox, UpdateTrackingEvent
 from models.dto import EventType
 
@@ -78,29 +78,39 @@ class TrackingUpdateSenderThread:
     async def send_updates(self):
         while not self.has_quit():
             if len(self.update_queue_items) != 0:
-                bounding_boxes: list[BoundingBox] = []
-
-                for index, update_queue_item in enumerate(self.update_queue_items):
-                    # here the update sender stops trackers from tracking
-                    update_queue_item.latest_bounding_box = update_queue_item.input_queue.get()
-                    update_queue_item.latest_frame = update_queue_item.latest_bounding_box.frame_number
-
-                max_frame_number: int = self.get_current_max_frame_number()
-                for update_queue_item in self.update_queue_items:
-                    while not update_queue_item.latest_frame == max_frame_number:
-                        update_queue_item.latest_bounding_box = update_queue_item.input_queue.get()
-                        update_queue_item.latest_frame = update_queue_item.latest_bounding_box.frame_number
-                    bounding_boxes.append(update_queue_item.latest_bounding_box)
-
-                for index, bounding_box in enumerate(bounding_boxes):
-                    logger.debug(f"Sending bounding box {bounding_box.frame_number} from queue {index}")
-
-                update_tracking_event: UpdateTrackingEvent = UpdateTrackingEvent(event_type=EventType.UPDATE_TRACKING,
-                                                                                 bounding_boxes=bounding_boxes,
-                                                                                 frame_number=max_frame_number)
                 try:
-                    await self.websocket.send_json(update_tracking_event.model_dump_json())
-                except RuntimeError as e:
-                    logger.warning(e)
-                logger.debug(f"UpdateTrackingEvent sent for frame {update_tracking_event.frame_number}")
+                    bounding_boxes: list[BoundingBox] = []
+
+                    for index, update_queue_item in enumerate(self.update_queue_items):
+                        # here the update sender stops trackers from tracking
+                        update_queue_item.latest_bounding_box = update_queue_item.input_queue.get(
+                            timeout=NO_UPDATES_TO_SEND_TIMEOUT)
+                        update_queue_item.latest_frame = update_queue_item.latest_bounding_box.frame_number
+
+                    max_frame_number: int = self.get_current_max_frame_number()
+                    for update_queue_item in self.update_queue_items:
+                        while not update_queue_item.latest_frame == max_frame_number:
+                            update_queue_item.latest_bounding_box = update_queue_item.input_queue.get(
+                                timeout=NO_UPDATES_TO_SEND_TIMEOUT)
+                            update_queue_item.latest_frame = update_queue_item.latest_bounding_box.frame_number
+                        bounding_boxes.append(update_queue_item.latest_bounding_box)
+
+                    for index, bounding_box in enumerate(bounding_boxes):
+                        logger.debug(f"Sending bounding box {bounding_box.frame_number} from queue {index}")
+
+                    update_tracking_event: UpdateTrackingEvent = UpdateTrackingEvent(
+                        event_type=EventType.UPDATE_TRACKING,
+                        bounding_boxes=bounding_boxes,
+                        frame_number=max_frame_number)
+                    try:
+                        await self.websocket.send_json(update_tracking_event.model_dump_json())
+                    except RuntimeError as e:
+                        logger.warning(e)
+                    logger.debug(f"UpdateTrackingEvent sent for frame {update_tracking_event.frame_number}")
+                except queue.Empty:
+                    logger.warning("Tracking update sender did not receive updates.")
+            else:
+                # busy waiting...
+                sleep(0.5)
+                logger.debug("Tracking update sender waiting...")
         logger.debug(f"Tracking update sender thread exited")

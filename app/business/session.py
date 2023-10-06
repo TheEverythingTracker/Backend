@@ -102,5 +102,6 @@ class Session:
 
     def on_video_frame_producer_quits(self, event: dto.ThreadingEvent):
         message = f"Session '{self.session_id}': {event.message}"
-        logger.critical(f"-----------> TODO: {message}")
-        # todo: Session neu anlegen, ohne die Websocket-Verbindung zu trennen?
+        logger.critical(f"TODO: {message}")
+        # todo: z.B. Event, das dem Frontend sagt, dass das Backend das Video nicht weiterliest
+        #  --> Frontend kann keine neuen Boundingboxen mehr hinzufügen
