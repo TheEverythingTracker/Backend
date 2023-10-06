@@ -54,19 +54,21 @@ class Session:
         self.video_frame_consumers[video_frame_consumer.object_id] = video_frame_consumer
         return dto.SuccessEvent(event_type=EventType.SUCCESS, request_id=event.request_id, message="OK.")
 
-    def delete_bounding_boxes(self, event: dto.DeleteBoundingBoxesEvent):
+    async def delete_bounding_boxes(self, event: dto.DeleteBoundingBoxesEvent):
         for object_id in event.ids:
-            self.delete_bounding_box(object_id)
+            await self.delete_bounding_box(object_id)
         return dto.SuccessEvent(event_type=EventType.SUCCESS, request_id=event.request_id, message="OK.")
 
-    def delete_bounding_box(self, object_id):
+    async def delete_bounding_box(self, object_id, is_error=False):
         if object_id in self.video_frame_consumers:
             consumer = self.video_frame_consumers[object_id]
             self.video_frame_producer.remove_queue(consumer.input_queue)
             self.tracking_update_sender.remove_queue(consumer.output_queue)
             consumer.quit()
             self.video_frame_consumers.pop(object_id)
-            # TODO: Send Error event: Bounding Box deleted or make the frontend forget the box if there is no update for a while?
+            if is_error:
+                answer = dto.TrackingErrorEvent(event_type=EventType.TRACKING_ERROR, message=f"Tracker lost object {object_id}", boundingBoxId=object_id)
+                await self.websocket.send_json(answer.model_dump_json())
 
     async def consume_websocket_events(self):
         try:
@@ -89,16 +91,16 @@ class Session:
         elif message['event_type'] == dto.EventType.ADD_BOUNDING_BOX:
             answer = self.add_bounding_box(dto.AddBoundingBoxEvent.model_validate(message))
         elif message['event_type'] == dto.EventType.DELETE_BOUNDING_BOX:
-            answer = self.delete_bounding_boxes(dto.DeleteBoundingBoxesEvent.model_validate(message))
+            answer = await self.delete_bounding_boxes(dto.DeleteBoundingBoxesEvent.model_validate(message))
         else:
             raise ValueError(f"Unknown event type '{message['event_type']}'")
         logger.debug(f"Session '{self.session_id}' handled {message['event_type']}")
         return answer
 
     # callbacks vermischen den Ausführungskontext zwischen den Threads
-    def on_video_frame_consumer_error(self, event: dto.ThreadingEvent):
+    async def on_video_frame_consumer_error(self, event: dto.ThreadingEvent):
         logger.error(event.message)
-        self.delete_bounding_box(event.source)
+        await self.delete_bounding_box(event.source, is_error=True)
 
     def on_video_frame_producer_quits(self, event: dto.ThreadingEvent):
         message = f"Session '{self.session_id}': {event.message}"

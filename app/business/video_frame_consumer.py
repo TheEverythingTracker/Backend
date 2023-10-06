@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import queue
 import threading
@@ -37,17 +38,17 @@ class VideoFrameConsumerThread:
         self.object_id = object_id
         self.input_queue = queue.Queue(QUEUE_SIZE)
         self.output_queue = queue.Queue(QUEUE_SIZE)
-        self.thread: threading.Thread = threading.Thread(target=self.run_tracking_loop)
+        self.thread: threading.Thread = threading.Thread(target=self.run_in_async_loop)
         self.thread.daemon = True
         self.should_quit = threading.Event()
         self.error_callback = on_error_callback
 
-    def on_error(self, message: str):
+    async def on_error(self, message: str):
         """This method should be called whenever there is an error which means that this thread cannot continue its work.
         The error_callback should be set by the session-object which should handle the deletion of this object"""
         logger.error(message)
         e = ThreadingEvent(self.object_id, message)
-        self.error_callback(e)
+        await self.error_callback(e)
 
     def start(self, initial_bounding_box: BoundingBox):
         logger.debug(
@@ -74,7 +75,14 @@ class VideoFrameConsumerThread:
             logger.warning("Tracking failed")
             raise TrackingError("Tracking failed")
 
-    def run_tracking_loop(self):
+    def run_in_async_loop(self):
+        # https://stackoverflow.com/questions/59645272/how-do-i-pass-an-async-function-to-a-thread-target-in-python
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        loop.run_until_complete(self.run_tracking_loop())
+        loop.close()
+
+    async def run_tracking_loop(self):
         """
         Run the tracking loop and fill the output_queue with tracking data
         """
@@ -88,7 +96,7 @@ class VideoFrameConsumerThread:
                                 width=bounding_box[2], height=bounding_box[3]))
                 logger.debug(f"Tracker {self.object_id} processed frame {frame.frame_number}")
             except Exception as e:
-                self.on_error(f"Video frame consumer error: {e}")
+                await self.on_error(f"Video frame consumer error: {e}")
         self.read_queue_to_empty()
         logger.debug(f"Video frame consumer thread exited")
 
