@@ -13,6 +13,7 @@ class EventType(str, Enum):
     STOP_CONTROL_LOOP = "stop-control-loop"
     SUCCESS = "success"
     FAILURE = "failure"
+    TRACKING_ERROR = "tracking-error"
 
 
 class VideoFrame(BaseModel):
@@ -22,6 +23,11 @@ class VideoFrame(BaseModel):
 
 class Event(BaseModel):
     event_type: EventType
+
+
+class TrackingErrorEvent(Event):
+    message: str
+    boundingBoxId: int
 
 
 class IdEvent(Event):
