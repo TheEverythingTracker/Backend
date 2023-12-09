@@ -13,16 +13,24 @@ Backend for playing video and interactively tracking displayed objects.
 You need Docker installed on your machine. See [Docker Docs](https://docs.docker.com/engine/install/) for installation
 instructions.
 
-#### Run the Frontend Docker-Container:
+##### Pull the Frontend Image and run a container:
+
+```shell
+docker pull ghcr.io/theeverythingtracker/frontend:main 
+```
 
 ```shell
 docker run -it -p 8080:80 --name 'TheEverythingTracker_Frontend' ghcr.io/theeverythingtracker/frontend:main
 ```
 
-#### Run the Backend Docker-Container:
+#### Pull the Backend Image and run a container:
 
 ```shell
-docker run -p 8000:8000 --name 'TheEverythingTracker_Backend' ghcr.io/theeverythingtracker/backend:main
+docker pull ghcr.io/theeverythingtracker/backend:main
+```
+
+```shell
+docker run -it -p 8000:8000 --name 'TheEverythingTracker_Backend' ghcr.io/theeverythingtracker/backend:main
 ```
 
 #### Connect to the Frontend:
@@ -56,7 +64,8 @@ This application uses the following core dependencies:
 4. Create a virtual environment and install dependencies into it with ```poetry install``` while in the project
    directory
 5. Run ```python ./app/main.py```
-6. Learn how to set up the Frontend here: [TheEverytingTracker/Frontend](https://github.com/TheEverythingTracker/Frontend)
+6. Learn how to set up the Frontend
+   here: [TheEverytingTracker/Frontend](https://github.com/TheEverythingTracker/Frontend)
 
 ### Build a new Docker Image
 
