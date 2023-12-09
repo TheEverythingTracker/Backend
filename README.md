@@ -13,7 +13,7 @@ Backend for playing video and interactively tracking displayed objects.
 You need Docker installed on your machine. See [Docker Docs](https://docs.docker.com/engine/install/) for installation
 instructions.
 
-##### Pull the Frontend Image and run a container:
+#### Pull the Frontend Image and run a container:
 
 ```shell
 docker pull ghcr.io/theeverythingtracker/frontend:main 
