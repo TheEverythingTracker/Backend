@@ -27,7 +27,8 @@ class VideoFrameConsumerThread:
     should_quit: threading.Event
     error_callback: Callable
 
-    def __init__(self, object_id: int, on_error_callback: Callable):
+    def __init__(self, object_id: int, on_error_callback: Callable, input_queue: queue.Queue,
+                 output_queue: queue.Queue):
         """
         initialize object tracker thread, but do not run it yet.
         on_error will be called whenever there is an error which prevents this thread from continuing it's work.
@@ -36,8 +37,8 @@ class VideoFrameConsumerThread:
         """
         self.tracker = cv2.TrackerCSRT.create()
         self.object_id = object_id
-        self.input_queue = queue.Queue(QUEUE_SIZE)
-        self.output_queue = queue.Queue(QUEUE_SIZE)
+        self.input_queue = input_queue
+        self.output_queue = output_queue
         self.thread: threading.Thread = threading.Thread(target=self.run_in_async_loop)
         self.thread.daemon = True
         self.should_quit = threading.Event()

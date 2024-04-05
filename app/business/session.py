@@ -1,4 +1,5 @@
 import logging
+import queue
 from uuid import UUID
 
 from fastapi import WebSocket
@@ -6,7 +7,7 @@ from fastapi import WebSocket
 from business.tracking_update_sender import TrackingUpdateSenderThread
 from business.video_frame_consumer import VideoFrameConsumerThread
 from business.video_frame_producer import VideoFrameProducerThread
-from config.constants import LOG_LEVEL, LOG_FORMAT
+from config.constants import LOG_LEVEL, LOG_FORMAT, QUEUE_SIZE
 from models import dto
 from models.dto import EventType
 
@@ -43,12 +44,16 @@ class Session:
         return dto.SuccessEvent(event_type=EventType.SUCCESS, request_id=event.request_id, message="OK.")
 
     def add_bounding_box(self, event: dto.AddBoundingBoxEvent):
-        video_frame_consumer = VideoFrameConsumerThread(event.bounding_box.id, self.on_video_frame_consumer_error)
-        self.video_frame_producer.add_queue(video_frame_consumer.input_queue)
+        frame_queue = queue.Queue(QUEUE_SIZE)
+        bounding_box_queue = queue.Queue(QUEUE_SIZE)
+
+        video_frame_consumer = VideoFrameConsumerThread(event.bounding_box.id, self.on_video_frame_consumer_error,
+                                                        frame_queue, bounding_box_queue)
+        self.video_frame_producer.add_queue(frame_queue)
         if not self.video_frame_producer.is_running():
             self.video_frame_producer.start()
         video_frame_consumer.start(event.bounding_box)
-        self.tracking_update_sender.add_queue(video_frame_consumer.output_queue)
+        self.tracking_update_sender.add_queue(bounding_box_queue)
         if not self.tracking_update_sender.is_running():
             self.tracking_update_sender.start()
         self.video_frame_consumers[video_frame_consumer.object_id] = video_frame_consumer
