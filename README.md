@@ -4,6 +4,14 @@
 
 Backend for playing video and interactively tracking displayed objects.
 
+Features 
+* Tracking of multiple objects within a video
+* Support for multiple users and videos 
+* Adding and removing bounding boxes at runtime
+* WebSocket API for communication with the front end
+* Synchronization with the front end 
+* Modular design
+
 ## How to run
 
 ### Docker
